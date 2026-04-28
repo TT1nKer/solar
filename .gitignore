@@ -1,0 +1,22 @@
+# build artifacts
+*.o
+*.a
+*.so
+*.dylib
+build/
+
+# main binary
+/solar
+
+# test binaries (keep .cpp sources)
+tests/test_de
+tests/test_horizons
+tests/test_kepler
+tests/test_montecarlo
+tests/test_network
+
+# editor / system
+*.swp
+.DS_Store
+.vscode/
+.idea/
