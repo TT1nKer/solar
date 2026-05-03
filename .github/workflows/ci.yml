@@ -1,0 +1,33 @@
+name: C++ CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show compiler version
+        run: g++ --version
+
+      - name: Build (with -Wall -Wextra)
+        run: make
+
+      - name: Run test suite
+        run: make test
+
+      - name: Verify CLI starts
+        run: ./solar 2>&1 | head -5
+
+      - name: Run sample commands (no DE440)
+        run: |
+          ./solar bodies | head -5
+          ./solar transfer Earth Mars 2026-04-12
+          ./solar lagrange Sun Earth | head -10
+          ./solar energy 30 3600 --planets-only | tail -5
