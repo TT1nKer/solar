@@ -339,39 +339,46 @@ MissionPlan mars_direct_template() {
     return p;
 }
 
+// LIMITATION: This template uses HARDCODED Δv values (3.13 km/s TLI, 0.82 km/s LOI).
+// It does NOT compute the actual Earth-Moon trajectory because:
+//   1. Earth-Moon is NOT a heliocentric Lambert problem (Moon is in Earth's SOI)
+//   2. Proper computation requires patched-conic Earth-Moon transfer
+//      (Earth-centered hyperbolic departure -> Moon SOI -> Moon-centered capture)
+//   3. Or three-body dynamics in the Earth-Moon CR3BP
+// The Δv values are correct for typical low lunar orbit insertion from LEO,
+// taken from textbook references. This is a Δv accounting demonstration only.
 MissionPlan lunar_gateway_template() {
     MissionPlan p;
-    p.name = "Lunar Gateway";
+    p.name = "Lunar Gateway (Δv-accounting demo)";
     p.dry_mass_kg = 2000; p.fuel_mass_kg = 6000;
     p.thrust_N = 25000; p.isp_s = 320;
     p.spacecraft_area_m2 = 15; p.Cd = 2.2; p.Cr = 1.5;
 
     double jd_dep = calendar_to_jd(2026, 6, 15);
-    // jd_tli = jd_dep (TLI at departure)
-    double jd_arr = jd_dep + 4.5; // ~4.5 days transit
+    double jd_arr = jd_dep + 4.5; // ~4.5 days transit (standard lunar transfer)
 
-    // TLI: direct burn of ~3.13 km/s (standard TLI from LEO)
+    // TLI: hardcoded standard value from textbook (NOT computed from ephemeris)
     MissionEvent tli;
     tli.type = EventType::Burn;
     tli.jd = jd_dep;
     tli.description = "Trans-Lunar Injection";
-    tli.burn_dv_kms = 3.13; // standard TLI from 200 km LEO
-    tli.burn_direction = {0, 0, 0}; // prograde
+    tli.burn_dv_kms = 3.13; // textbook TLI from 200 km LEO
+    tli.burn_direction = {0, 0, 0};
     p.events.push_back(tli);
 
     MissionEvent coast;
     coast.type = EventType::Coast;
     coast.jd = jd_dep;
-    coast.description = "Lunar transit";
+    coast.description = "Lunar transit (no propagation)";
     coast.coast_end_jd = jd_arr;
     p.events.push_back(coast);
 
-    // LOI: ~0.8 km/s for lunar orbit insertion
+    // LOI: hardcoded standard value (NOT computed from ephemeris)
     MissionEvent loi;
     loi.type = EventType::Burn;
     loi.jd = jd_arr;
     loi.description = "Lunar orbit insertion";
-    loi.burn_dv_kms = 0.82; // LOI burn
+    loi.burn_dv_kms = 0.82; // textbook LOI value
     loi.burn_direction = {0, 0, 0};
     p.events.push_back(loi);
 
