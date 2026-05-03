@@ -14,6 +14,10 @@ tests/test_horizons
 tests/test_kepler
 tests/test_montecarlo
 tests/test_network
+tests/test_validation
+
+# JPL DE440 ephemeris data (download separately per README; ~59MB)
+data/
 
 # editor / system
 *.swp
