@@ -23,11 +23,12 @@ struct CR3BPState {
     double xdot, ydot, zdot;
 };
 
-// State + State Transition Matrix (6+36 = 42 elements)
-struct CR3BPStateSTM {
-    CR3BPState state;
-    double stm[6][6];
-};
+// NOTE: State Transition Matrix (CR3BPStateSTM) was removed in this revision.
+// The implementation in src/cr3bp.cpp had a numerical bug — STM values disagreed
+// with finite-difference Jacobians by ~100x. The Halo orbit corrector uses
+// finite differences instead. If you need STM propagation, please:
+//   1. Re-implement and validate against finite differences before use
+//   2. See docs/validation/06_halo_orbit_jacobi.md for the bug discussion
 
 struct LagrangePoints {
     CR3BPState L1, L2, L3, L4, L5;
@@ -69,15 +70,9 @@ std::vector<CR3BPState> propagate_cr3bp(
     const CR3BPState& ic, double mu, double t_span,
     double dt_output = 0.01, double atol = 1e-12, double rtol = 1e-12);
 
-// Propagate with STM (returns final state + STM)
-CR3BPStateSTM propagate_cr3bp_stm(
-    const CR3BPState& ic, double mu, double t_span,
-    double atol = 1e-12, double rtol = 1e-12);
-
 // Propagate until y=0 crossing (half-period), returns time
 double propagate_to_y_crossing(
     CR3BPState& state, double mu, double t_max,
-    CR3BPStateSTM* stm_out = nullptr,
     double atol = 1e-12, double rtol = 1e-12);
 
 // Richardson 3rd-order halo orbit initial conditions

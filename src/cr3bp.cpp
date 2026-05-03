@@ -148,85 +148,12 @@ static CR3BPState unpack_state(const std::vector<double>& v) {
     return {v[0], v[1], v[2], v[3], v[4], v[5]};
 }
 
-// Pack state + identity STM (42 elements)
-static std::vector<double> pack_state_stm(const CR3BPState& s) {
-    std::vector<double> v(42, 0.0);
-    v[0]=s.x; v[1]=s.y; v[2]=s.z; v[3]=s.xdot; v[4]=s.ydot; v[5]=s.zdot;
-    // Identity STM
-    for (int i = 0; i < 6; ++i) v[6 + i*6 + i] = 1.0;
-    return v;
-}
-
-static CR3BPStateSTM unpack_state_stm(const std::vector<double>& v) {
-    CR3BPStateSTM r;
-    r.state = {v[0], v[1], v[2], v[3], v[4], v[5]};
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j)
-            r.stm[i][j] = v[6 + i*6 + j];
-    return r;
-}
-
-// CR3BP + STM RHS for the generic integrator
-static std::vector<double> cr3bp_rhs_stm(double /*t*/, const std::vector<double>& y, double mu) {
-    CR3BPState s = {y[0], y[1], y[2], y[3], y[4], y[5]};
-    CR3BPState ds = cr3bp_derivatives(s, mu);
-
-    // Compute Jacobian of EOM (A matrix) for STM propagation
-    double x = s.x, yy = s.y, z = s.z;
-    double r1_sq = (x+mu)*(x+mu) + yy*yy + z*z;
-    double r2_sq = (x-1+mu)*(x-1+mu) + yy*yy + z*z;
-    double r1_5 = r1_sq * r1_sq * std::sqrt(r1_sq);
-    double r2_5 = r2_sq * r2_sq * std::sqrt(r2_sq);
-    double r1_3 = r1_sq * std::sqrt(r1_sq);
-    double r2_3 = r2_sq * std::sqrt(r2_sq);
-
-    // Second partial derivatives of Omega
-    double Oxx = 1.0 - (1-mu)/r1_3 - mu/r2_3
-                 + 3*(1-mu)*(x+mu)*(x+mu)/r1_5 + 3*mu*(x-1+mu)*(x-1+mu)/r2_5;
-    double Oyy = 1.0 - (1-mu)/r1_3 - mu/r2_3
-                 + 3*(1-mu)*yy*yy/r1_5 + 3*mu*yy*yy/r2_5;
-    double Ozz =     - (1-mu)/r1_3 - mu/r2_3
-                 + 3*(1-mu)*z*z/r1_5 + 3*mu*z*z/r2_5;
-    double Oxy = 3*(1-mu)*(x+mu)*yy/r1_5 + 3*mu*(x-1+mu)*yy/r2_5;
-    double Oxz = 3*(1-mu)*(x+mu)*z/r1_5 + 3*mu*(x-1+mu)*z/r2_5;
-    double Oyz = 3*(1-mu)*yy*z/r1_5 + 3*mu*yy*z/r2_5;
-
-    // A matrix (6x6)
-    // A = [ 0  I ]     where U = [Oxx Oxy Oxz; Oxy Oyy Oyz; Oxz Oyz Ozz]
-    //     [ U  J ]     and   J = [0 2 0; -2 0 0; 0 0 0]
-    double A[6][6] = {};
-    A[0][3] = 1; A[1][4] = 1; A[2][5] = 1;
-    A[3][0] = Oxx; A[3][1] = Oxy; A[3][2] = Oxz; A[3][4] = 2;
-    A[4][0] = Oxy; A[4][1] = Oyy; A[4][2] = Oyz; A[4][3] = -2;
-    A[5][0] = Oxz; A[5][1] = Oyz; A[5][2] = Ozz;
-
-    // dPhi/dt = A * Phi
-    double Phi[6][6], dPhi[6][6];
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j)
-            Phi[i][j] = y[6 + i*6 + j];
-
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j) {
-            dPhi[i][j] = 0;
-            for (int k = 0; k < 6; ++k)
-                dPhi[i][j] += A[i][k] * Phi[k][j];
-        }
-
-    // Pack output
-    std::vector<double> dy(42);
-    dy[0]=ds.xdot; dy[1]=ds.ydot; dy[2]=ds.zdot;
-    dy[3]=ds.xdot; // wait, derivatives of state
-    // Actually: dy/dt for state = [xdot, ydot, zdot, xddot, yddot, zddot]
-    dy[0] = ds.x; dy[1] = ds.y; dy[2] = ds.z; // = xdot, ydot, zdot
-    dy[3] = ds.xdot; dy[4] = ds.ydot; dy[5] = ds.zdot; // = accelerations
-
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j)
-            dy[6 + i*6 + j] = dPhi[i][j];
-
-    return dy;
-}
+// REMOVED: pack_state_stm, unpack_state_stm, cr3bp_rhs_stm, propagate_cr3bp_stm
+// Reason: STM propagation disagreed with finite-difference Jacobian by ~100x.
+// The bug was likely in how the augmented (6+36) state was packed/unpacked
+// or in the Jacobian construction. Rather than ship broken code, we removed it.
+// The Halo orbit corrector uses finite differences (slower, but verified).
+// To re-implement: validate against finite differences before exposing in API.
 
 std::vector<CR3BPState> propagate_cr3bp(
     const CR3BPState& ic, double mu, double t_span,
@@ -267,57 +194,17 @@ std::vector<CR3BPState> propagate_cr3bp(
     return trajectory;
 }
 
-CR3BPStateSTM propagate_cr3bp_stm(
-    const CR3BPState& ic, double mu, double t_span,
-    double atol, double rtol)
-{
-    auto rhs = [mu](double t, const std::vector<double>& y) {
-        return cr3bp_rhs_stm(t, y, mu);
-    };
-
-    auto y = pack_state_stm(ic);
-    double t = 0.0;
-    double dt = 0.01;
-
-    while (t < t_span) {
-        double h = std::min(dt, t_span - t);
-        auto result = dopri5_generic_step(y, t, h, rhs, atol, rtol);
-        if (result.accepted) {
-            y = std::move(result.y);
-            t += h;
-            dt = result.dt_next;
-        } else {
-            dt = result.dt_next;
-        }
-    }
-
-    return unpack_state_stm(y);
-}
-
 double propagate_to_y_crossing(
     CR3BPState& state, double mu, double t_max,
-    CR3BPStateSTM* stm_out, double atol, double rtol)
+    double atol, double rtol)
 {
-    bool use_stm = (stm_out != nullptr);
-
     auto rhs_simple = [mu](double /*t*/, const std::vector<double>& y) -> std::vector<double> {
         CR3BPState s = {y[0], y[1], y[2], y[3], y[4], y[5]};
         CR3BPState ds = cr3bp_derivatives(s, mu);
         return {ds.x, ds.y, ds.z, ds.xdot, ds.ydot, ds.zdot};
     };
-    auto rhs_stm = [mu](double t, const std::vector<double>& y) {
-        return cr3bp_rhs_stm(t, y, mu);
-    };
-
-    std::vector<double> y;
-    GenericODEFunc rhs;
-    if (use_stm) {
-        y = pack_state_stm(state);
-        rhs = rhs_stm;
-    } else {
-        y = pack_state(state);
-        rhs = rhs_simple;
-    }
+    std::vector<double> y = pack_state(state);
+    GenericODEFunc rhs = rhs_simple;
 
     double t = 0.0;
     double dt = 0.01;
@@ -370,7 +257,6 @@ double propagate_to_y_crossing(
             t = t_lo;
 
             state = unpack_state(y);
-            if (use_stm) *stm_out = unpack_state_stm(y);
             return t;
         }
 
@@ -380,7 +266,6 @@ double propagate_to_y_crossing(
     }
 
     state = unpack_state(y);
-    if (use_stm) *stm_out = unpack_state_stm(y);
     return t;
 }
 
