@@ -4,6 +4,7 @@
 #include "solar/constants.h"
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 
 namespace solar {
 
@@ -19,7 +20,9 @@ void NBodySim::init(std::vector<Body> bodies_in, double t0) {
 }
 
 void NBodySim::add_force(std::unique_ptr<ForceModel> model) {
+    if (!model) throw std::invalid_argument("NBodySim::add_force: model must not be null");
     forces_.push_back(std::move(model));
+    initialized = false;
 }
 
 void NBodySim::remove_force(const std::string& name) {
@@ -29,14 +32,16 @@ void NBodySim::remove_force(const std::string& name) {
                 return f->name() == name;
             }),
         forces_.end());
+    initialized = false;
 }
 
 void NBodySim::clear_forces() {
     forces_.clear();
+    initialized = false;
 }
 
 void NBodySim::add_default_forces() {
-    forces_.push_back(std::make_unique<NewtonianGravity>());
+    add_force(std::make_unique<NewtonianGravity>());
 }
 
 std::vector<std::string> NBodySim::force_names() const {
@@ -59,9 +64,21 @@ std::vector<Vec3> NBodySim::compute_accelerations() const {
 }
 
 void NBodySim::step(double dt) {
-    if (!initialized) {
-        accels = compute_accelerations();
-        initialized = true;
+    if (!std::isfinite(dt) || dt <= 0.0)
+        throw std::invalid_argument("NBodySim::step: dt must be finite and positive");
+
+    if (integrator == IntegratorType::Verlet) {
+        for (const auto& force : forces_) {
+            if (force->depends_on_velocity()) {
+                throw std::logic_error(
+                    "NBodySim::step: velocity-dependent force '" + force->name() +
+                    "' requires RK4 or DOPRI5");
+            }
+        }
+        if (!initialized) {
+            accels = compute_accelerations();
+            initialized = true;
+        }
     }
 
     size_t n = bodies.size();
@@ -73,22 +90,22 @@ void NBodySim::step(double dt) {
         states[i] = bodies[i].state;
         masses[i] = bodies[i].mass;
     }
+    double integration_time = time;
 
-    // Acceleration function: builds temporary body view with updated positions,
-    // then delegates to all force models
-    auto accel_func = [this](const std::vector<Vec3>& positions,
+    auto accel_func = [this](double stage_time,
+                             const std::vector<State>& stage_states,
                              const std::vector<double>& /*masses*/) -> std::vector<Vec3> {
-        size_t n = positions.size();
+        if (stage_states.size() != this->bodies.size())
+            throw std::invalid_argument("NBodySim: integrator stage size mismatch");
 
-        // Build temporary bodies with updated positions for force models
-        std::vector<Body> temp_bodies = this->bodies;
-        for (size_t i = 0; i < n; ++i) {
-            temp_bodies[i].state.pos = positions[i];
+        std::vector<Body> stage_bodies = this->bodies;
+        for (size_t i = 0; i < stage_states.size(); ++i) {
+            stage_bodies[i].state = stage_states[i];
         }
 
-        std::vector<Vec3> acc(n, {0, 0, 0});
+        std::vector<Vec3> acc(stage_states.size(), {0, 0, 0});
         for (const auto& force : this->forces_) {
-            force->compute(temp_bodies, this->time, acc);
+            force->compute(stage_bodies, stage_time, acc);
         }
         return acc;
     };
@@ -96,22 +113,46 @@ void NBodySim::step(double dt) {
     // Select integrator
     switch (integrator) {
         case IntegratorType::DOPRI5: {
-            auto result = dopri5_step(states, masses, accel_func, dt, atol, rtol);
-            if (result.accepted) {
-                states = std::move(result.states);
-                dt_adaptive = result.dt_next;
+            double remaining = dt;
+            double h = dt_adaptive > 0.0 ? std::min(dt_adaptive, remaining) : remaining;
+            int attempts = 0;
+            constexpr int MAX_ATTEMPTS = 100000;
+
+            while (remaining > 0.0) {
+                h = std::min(h, remaining);
+                auto result = dopri5_step(
+                    states, masses, accel_func, integration_time, h, atol, rtol);
+                total_steps++;
+                attempts++;
+
+                if (!std::isfinite(result.dt_next) || result.dt_next <= 0.0 ||
+                    attempts > MAX_ATTEMPTS) {
+                    throw std::runtime_error("NBodySim::step: adaptive integrator made no progress");
+                }
+
+                if (result.accepted) {
+                    states = std::move(result.states);
+                    integration_time += h;
+                    remaining -= h;
+                } else {
+                    rejected_steps++;
+                }
+                h = result.dt_next;
             }
-            total_steps++;
-            if (!result.accepted) rejected_steps++;
+            dt_adaptive = h;
+            initialized = false;
             break;
         }
         case IntegratorType::RK4:
-            states = rk4_step(states, masses, accel_func, dt);
+            states = rk4_step(states, masses, accel_func, integration_time, dt);
+            integration_time += dt;
             total_steps++;
+            initialized = false;
             break;
         case IntegratorType::Verlet:
         default:
-            verlet_step(states, masses, accel_func, accels, dt);
+            verlet_step(states, masses, accel_func, accels, integration_time, dt);
+            integration_time += dt;
             total_steps++;
             break;
     }
@@ -120,68 +161,28 @@ void NBodySim::step(double dt) {
     for (size_t i = 0; i < n; ++i) {
         bodies[i].state = states[i];
     }
+    time = integration_time;
 
-    time += dt;
 }
 
 void NBodySim::run(double duration, double dt, double output_interval, OutputCallback cb) {
-    double next_output = 0.0;
+    if (!std::isfinite(duration) || duration < 0.0 ||
+        !std::isfinite(dt) || dt <= 0.0 ||
+        !std::isfinite(output_interval) || output_interval <= 0.0) {
+        throw std::invalid_argument(
+            "NBodySim::run: duration must be non-negative; dt and output interval must be positive");
+    }
+
+    double next_output = output_interval;
     double elapsed = 0.0;
 
     if (cb) cb(time, bodies);
-
-    if (integrator == IntegratorType::DOPRI5) {
-        // Adaptive stepping
-        if (dt_adaptive <= 0.0) dt_adaptive = dt;
-        while (elapsed < duration) {
-            double h = std::min(dt_adaptive, duration - elapsed);
-
-            // Extract and prepare
-            size_t n = bodies.size();
-            std::vector<State> states(n);
-            std::vector<double> masses(n);
-            for (size_t i = 0; i < n; ++i) {
-                states[i] = bodies[i].state;
-                masses[i] = bodies[i].mass;
-            }
-
-            auto accel_func = [this](const std::vector<Vec3>& positions,
-                                     const std::vector<double>&) -> std::vector<Vec3> {
-                size_t n = positions.size();
-                std::vector<Body> temp = this->bodies;
-                for (size_t i = 0; i < n; ++i) temp[i].state.pos = positions[i];
-                std::vector<Vec3> acc(n, {0,0,0});
-                for (const auto& f : this->forces_) f->compute(temp, this->time, acc);
-                return acc;
-            };
-
-            auto result = dopri5_step(states, masses, accel_func, h, atol, rtol);
-            total_steps++;
-
-            if (result.accepted) {
-                for (size_t i = 0; i < n; ++i) bodies[i].state = result.states[i];
-                time += h;
-                elapsed += h;
-                dt_adaptive = result.dt_next;
-
-                if (elapsed >= next_output + output_interval) {
-                    next_output += output_interval;
-                    if (cb) cb(time, bodies);
-                }
-            } else {
-                rejected_steps++;
-                dt_adaptive = result.dt_next;
-            }
-        }
-        return;
-    }
-
-    // Fixed stepping (Verlet or RK4)
     while (elapsed < duration) {
-        step(dt);
-        elapsed += dt;
+        double h = std::min(dt, duration - elapsed);
+        step(h);
+        elapsed += h;
 
-        if (elapsed >= next_output + output_interval) {
+        if (elapsed >= next_output || elapsed >= duration) {
             next_output += output_interval;
             if (cb) cb(time, bodies);
         }
@@ -193,7 +194,7 @@ double NBodySim::total_energy() const {
     size_t n = bodies.size();
 
     for (size_t i = 0; i < n; ++i) {
-        ke += 0.5 * bodies[i].mass * bodies[i].state.vel.norm_sq();
+        ke += 0.5 * (bodies[i].mu / constants::G) * bodies[i].state.vel.norm_sq();
     }
 
     // Sum potential energy from all force models
@@ -208,7 +209,7 @@ double NBodySim::total_energy() const {
 Vec3 NBodySim::total_angular_momentum() const {
     Vec3 L = {0, 0, 0};
     for (const auto& b : bodies) {
-        L += b.state.pos.cross(b.state.vel) * b.mass;
+        L += b.state.pos.cross(b.state.vel) * (b.mu / constants::G);
     }
     return L;
 }

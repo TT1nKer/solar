@@ -37,7 +37,8 @@ double NewtonianGravity::potential_energy(
         for (size_t j = i + 1; j < n; ++j) {
             Vec3 rij = bodies[j].state.pos - bodies[i].state.pos;
             double dist = rij.norm();
-            pe -= constants::G * bodies[i].mass * bodies[j].mass / dist;
+            // Dynamics uses mu directly, so the matching inertial mass is mu/G.
+            pe -= bodies[i].mu * bodies[j].mu / (constants::G * dist);
         }
     }
 

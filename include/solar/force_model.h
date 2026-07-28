@@ -13,6 +13,9 @@ public:
     // Name for logging/debugging
     virtual std::string name() const = 0;
 
+    // Velocity Verlet is valid only when every active force is position-dependent.
+    virtual bool depends_on_velocity() const { return false; }
+
     // Compute accelerations on all bodies. ADDS to acc (does not replace).
     // acc is pre-sized to bodies.size() and zero-initialized by the caller.
     virtual void compute(

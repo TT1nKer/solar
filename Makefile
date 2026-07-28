@@ -10,7 +10,7 @@ SRCS     := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS     := $(SRCS:.cpp=.o)
 LIB      := libsolar.a
 
-CLI_SRC  := $(CLI_DIR)/main.cpp
+CLI_SRCS := $(wildcard $(CLI_DIR)/*.cpp)
 CLI_BIN  := solar
 
 TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)
@@ -26,11 +26,14 @@ $(LIB): $(OBJS)
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(CLI_BIN): $(CLI_SRC) $(LIB)
-	$(CXX) $(CXXFLAGS) $< -L. -lsolar -o $@
+$(CLI_BIN): $(CLI_SRCS) $(LIB)
+	$(CXX) $(CXXFLAGS) $(CLI_SRCS) -L. -lsolar -o $@
 
 test: $(TEST_BINS)
-	@for t in $(TEST_BINS); do echo "--- $$t ---"; ./$$t; done
+	@status=0; for t in $(TEST_BINS); do \
+		echo "--- $$t ---"; \
+		./$$t || status=$$?; \
+	done; exit $$status
 
 $(TEST_DIR)/%: $(TEST_DIR)/%.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) $< -L. -lsolar -o $@

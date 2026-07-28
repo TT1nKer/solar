@@ -18,6 +18,7 @@ public:
     explicit AtmosphericDrag(std::vector<DragTarget> targets);
 
     std::string name() const override { return "atmospheric_drag"; }
+    bool depends_on_velocity() const override { return true; }
 
     void compute(
         const std::vector<Body>& bodies,
