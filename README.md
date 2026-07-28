@@ -1,8 +1,22 @@
+<p align="center">
+  <img src="docs/readme-cover.svg" alt="solar — orbital-mechanics sandbox" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://ttinker.net">ttinker.net</a> ·
+  <a href="FEATURE_STATUS.md">feature status</a> ·
+  <a href="LIMITATIONS.md">limitations</a>
+</p>
+
 # Solar System Simulator
 
 A C++17 educational orbital mechanics sandbox for learning and experimenting with ephemeris computation, N-body integration, transfer orbits, perturbation models, and mission simulation.
 
 > **This project is experimental.** It is not intended to replace professional astrodynamics tools such as GMAT, STK, SPICE, or Orekit. See [LIMITATIONS.md](LIMITATIONS.md) and [FEATURE_STATUS.md](FEATURE_STATUS.md) for honest assessments of what's implemented vs. experimental vs. research prototype.
+
+| State | Evidence | Current boundary |
+| --- | --- | --- |
+| Educational sandbox | Reproducible validation reports; Ubuntu CI passes | Not an operational design or precision-ephemeris tool; Apple Clang portability is not currently clean |
 
 ---
 
@@ -45,7 +59,10 @@ See [LIMITATIONS.md](LIMITATIONS.md) for the full list across all 9 categories.
 
 [![C++ CI](https://github.com/TT1nKer/solar/actions/workflows/ci.yml/badge.svg)](https://github.com/TT1nKer/solar/actions/workflows/ci.yml)
 
-Every push runs: `make` (with `-Wall -Wextra`, must produce zero warnings) → `make test` (must pass 13/13) → smoke test of CLI commands.
+The Ubuntu workflow runs `make`, `make test`, and CLI smoke tests. The latest
+recorded Ubuntu run passes. A local Apple Clang build currently emits warnings
+and fails to compile `test_validation.cpp` because it relies on a transitive
+`<sstream>` include, so cross-platform cleanliness is not claimed.
 
 ---
 
@@ -73,10 +90,6 @@ Every push runs: `make` (with `-Wall -Wextra`, must produce zero warnings) → `
 ### Build status
 
 ```bash
-$ make clean && make
-g++ -std=c++17 -O2 -Wall -Wextra -Iinclude ...
-0 warnings
-
 $ make test
 # 5 test files, 64 assertions total:
 #   test_de.cpp           — 8 PASS  (DE440 vs JPL Horizons)
