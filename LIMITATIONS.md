@@ -20,6 +20,14 @@ This project is **educational and experimental**. It is not intended to replace 
 - Solar radiation pressure uses **cylindrical shadow model** (no penumbra).
 - Spherical harmonics include **zonal terms only** (Jn). No tesseral (Cnm/Snm) terms.
 - General relativity correction is **1PN Schwarzschild only**, no Lense-Thirring or higher-order terms.
+- Velocity-dependent 1PN and drag forces require RK4/DOPRI5; the CLI uses `--adaptive` because Velocity Verlet is not valid for them.
+
+### Strong-field relativity
+- The strong-field module propagates test particles and photons in a **fixed Schwarzschild spacetime**.
+- It does not yet implement Kerr spin, charged black holes, ray-traced images, self-force, dynamical spacetime, numerical relativity, GRMHD, or quantum effects.
+- Schwarzschild coordinates cover only `r > 2M`; propagation stops at a configurable exterior horizon guard.
+- Geodesic inputs use geometric units (`G = c = 1`): `t`, `r`, and affine parameter are in km.
+- Current validation covers exact circular solutions and radial infall invariants, not independent cross-code comparisons.
 
 ### Integrators
 - Verlet is symplectic (good for long-term) but only 2nd order.

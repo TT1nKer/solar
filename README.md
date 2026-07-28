@@ -30,7 +30,7 @@ Rather than make claims, here is the **reproducible evidence**. Every number bel
 |---|---|---|---|---|---|
 | Kepler equation | `./tests/test_kepler` | E=1.498701 (Wolfram) | 1.498701 | <1e-6 | [01](docs/validation/01_kepler_solver.md) |
 | Earth-Mars Hohmann | `./solar transfer Earth Mars 2026-04-12` | 5.59 km/s (Curtis textbook) | 5.594 km/s | 0.07% | [02](docs/validation/02_hohmann_earth_mars.md) |
-| Energy conservation | `./solar energy 365 3600 --planets-only` | bounded for symplectic | 7.66e-6 drift | OK | [03](docs/validation/03_energy_conservation.md) |
+| Energy conservation | `./solar energy 365 3600 --planets-only` | bounded for symplectic | 5.00e-12 endpoint error | OK | [03](docs/validation/03_energy_conservation.md) |
 | DE440 Earth at J2000 | `./tests/test_de` | JPL Horizons | <1 m position error | 5e-6 km | [04](docs/validation/04_de440_earth_j2000.md) |
 | Sun-Earth L1 distance | `./solar lagrange Sun Earth` | 1.491×10⁶ km (Vallado) | 1.4916×10⁶ km | <0.05% | [05](docs/validation/05_lagrange_points.md) |
 | SE-L1 Halo period | `./solar halo Sun Earth 1 50000` | ~177.8 days (NASA SOHO) | 177.89 days | 0.05% | [06](docs/validation/06_halo_orbit_jacobi.md) |
@@ -76,6 +76,7 @@ and fails to compile `test_validation.cpp` because it relies on a transitive
   - JPL DE440 ephemeris parser (ASCII format)
   - Lambert solver, Hohmann transfer, porkchop plots
   - Perturbation models: J2-J6, GR Schwarzschild, SRP, drag
+  - Strong-field Schwarzschild timelike/null geodesics in geometric units
   - Coordinate frames (ICRF, Ecliptic J2000, body-fixed) and time scales (TDB/TT/UTC/TAI)
   - CR3BP, Lagrange points, Halo orbits (research prototype)
   - Mission simulation engine (toy model)
@@ -91,11 +92,13 @@ and fails to compile `test_validation.cpp` because it relies on a transitive
 
 ```bash
 $ make test
-# 5 test files, 64 assertions total:
-#   test_de.cpp           — 8 PASS  (DE440 vs JPL Horizons)
+# Core regression plus focused dynamics and Schwarzschild geodesic tests:
+#   test_de.cpp           — 8 checks when optional DE440 data is installed
+#   test_dynamics.cpp     — 4 PASS  (stage state/time, integrator safety, exact duration)
 #   test_kepler.cpp       — 16 PASS (Kepler solver, ephemeris, basic orbits)
 #   test_montecarlo.cpp   — 13 PASS (vehicle, Monte Carlo, sensitivity)
 #   test_network.cpp      — 13 PASS (transfer network, Dijkstra)
+#   test_relativity.cpp   — 14 PASS (Schwarzschild geodesics, horizon event, invariants)
 #   test_validation.cpp   — 14 PASS (cross-checks every README claim)
 ```
 
@@ -106,9 +109,10 @@ $ make test
 ```bash
 git clone <repo> && cd solar
 make
-make test                                   # 64 assertions across 5 test files
+make test                                   # DE440 test skips unless data/de440.asc is installed
 ./solar bodies                              # list 17 celestial bodies
 ./solar transfer Earth Mars 2026-04-12      # textbook Hohmann transfer
+./solar blackhole circular 10 10 1          # one r=10M orbit around a 10-solar-mass black hole
 ```
 
 ### Sample output: Hohmann transfer
@@ -157,8 +161,8 @@ Published period (NASA SOHO class): ~177.8 days. Match: 0.05%. See [validation/0
 ```
 $ ./solar energy 365 3600 --planets-only
 # Forces: newtonian_gravity
-# Relative energy drift:  7.66e-06
-# Relative |L| drift:     1.79e-08
+# Relative energy drift:  5.00e-12
+# Relative |L| drift:     1.21e-15
 ```
 
 Verlet symplectic integrator over 1 year, 9 bodies. See [validation/03](docs/validation/03_energy_conservation.md).
@@ -192,7 +196,7 @@ Earth at J2000: matches JPL Horizons to **<1 m** position, **<0.01 mm/s** veloci
 
 ```bash
 make            # builds libsolar.a + ./solar
-make test       # 64 assertions across 5 test files (test_validation.cpp cross-checks every README claim)
+make test       # all local tests; optional DE440 data is reported as skipped when absent
 make clean      # removes build artifacts
 ```
 

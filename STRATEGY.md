@@ -4,18 +4,18 @@
 
 ## Current State Assessment
 
-The orbital engine is solid:
+The orbital engine is an experimental but useful base:
 - Celestial mechanics (Kepler, N-body, Lambert, CR3BP, Halo orbits)
-- Precision ephemeris (DE440, sub-meter)
+- DE440 parsing with a sub-meter result demonstrated at one epoch
 - Modular physics (13 force models composable)
 - Adaptive integration (DOPRI5 + Verlet)
 - Mission simulation (Mars Direct, Lunar Gateway, Voyager Grand Tour)
 
-**What's strong**: "how the universe moves" — dynamical correctness.
+**What's strong**: broad educational coverage with reproducible reference cases.
 
 **What's missing**: "should we fly?", "what if it fails?", "where does supply come from?", "how do multiple agents coordinate?", "how to keep expanding after comms break?"
 
-The limiting factor is no longer numerical accuracy. It's **engineering closure and autonomous closure**.
+Numerical validation and engineering closure remain prerequisites for every higher layer.
 
 ## Architecture: 8-Layer Universe Operating System
 

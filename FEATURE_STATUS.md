@@ -11,7 +11,7 @@ Status definitions:
 | Kepler equation solver | Implemented | 16/16 unit tests, Newton-Raphson converges to 1e-12 |
 | Orbital elements ↔ state | Implemented | Round-trip test passes |
 | Hohmann transfer | Implemented | Earth-Mars: 5.59 km/s, 259d (matches textbook) |
-| N-body Verlet integrator | Implemented | Energy drift 7.7e-6 over 1 year (9 bodies) |
+| N-body Verlet integrator | Implemented | Endpoint energy error 5.0e-12 over 1 year (9 bodies) |
 | RK4 integrator | Implemented | Standard regression |
 | DOPRI5 adaptive integrator | Experimental | Angular momentum 200x better than Verlet, but no analytic test |
 | DE440 ASCII parser | Experimental | Earth at J2000 matches Horizons to <1m, only 1 test case |
@@ -21,6 +21,7 @@ Status definitions:
 | J2 perturbation | Experimental | Order-of-magnitude check |
 | Spherical harmonics (J2-J6) | Experimental | Matches J2 model to machine precision; no Jn-only validation |
 | GR Schwarzschild correction | Experimental | Order-of-magnitude check, no Mercury precession test |
+| Schwarzschild geodesics | Experimental | Timelike circular orbit, photon sphere, infall, metric norm and Killing invariants |
 | Solar radiation pressure | Experimental | 1 AU magnitude correct; shadow logic untested |
 | Atmospheric drag | Experimental | Hand calculation match; ISS density underestimated (single-exp) |
 | Lambert solver | Experimental | Earth-Mars regression matches |
@@ -51,7 +52,7 @@ Status definitions:
 **Jacobi constant conservation**: 2.6e-14 over 10 periods.
 *Caveat*: Specific to the converged orbit. Other initial conditions may show different drift.
 
-**Energy conservation (1 year, dt=3600s, Verlet)**: 7.7e-6 relative drift.
+**Energy conservation (1 year, dt=3600s, Verlet)**: 5.0e-12 relative endpoint error.
 *Caveat*: Solar system 9-body case only. Different timesteps and force models give different results.
 
 ## What's NOT validated

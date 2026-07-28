@@ -13,6 +13,7 @@ public:
     explicit GRCorrection(int central_body_index = 0);
 
     std::string name() const override { return "gr_schwarzschild"; }
+    bool depends_on_velocity() const override { return true; }
 
     void compute(
         const std::vector<Body>& bodies,

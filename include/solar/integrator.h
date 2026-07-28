@@ -6,9 +6,11 @@
 
 namespace solar {
 
-// Acceleration function: given positions and masses, return accelerations
+// Acceleration function evaluated at one integrator stage.
+// The complete state and stage time are required for velocity- and time-dependent forces.
 using AccelFunc = std::function<std::vector<Vec3>(
-    const std::vector<Vec3>& positions,
+    double time,
+    const std::vector<State>& states,
     const std::vector<double>& masses)>;
 
 // 4th-order Runge-Kutta step for N bodies
@@ -17,6 +19,7 @@ std::vector<State> rk4_step(
     const std::vector<State>& states,
     const std::vector<double>& masses,
     const AccelFunc& accel,
+    double time,
     double dt);
 
 // Velocity Verlet (symplectic) step — modifies states in place
@@ -26,6 +29,7 @@ void verlet_step(
     const std::vector<double>& masses,
     const AccelFunc& accel,
     std::vector<Vec3>& prev_accels,
+    double time,
     double dt);
 
 // Adaptive Dormand-Prince step result
@@ -46,6 +50,7 @@ AdaptiveResult dopri5_step(
     const std::vector<State>& states,
     const std::vector<double>& masses,
     const AccelFunc& accel,
+    double time,
     double dt,
     double atol = 1e-10,
     double rtol = 1e-10);

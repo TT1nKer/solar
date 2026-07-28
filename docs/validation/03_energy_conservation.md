@@ -1,7 +1,7 @@
 # Validation: Energy Conservation
 
 ## Claim
-The N-body simulator's Velocity Verlet integrator conserves total mechanical energy to ~1e-5 relative drift over 1 year for the 9-body solar system.
+The N-body simulator's Velocity Verlet integrator has a 5.0e-12 relative endpoint energy error over 1 year for the 9-body solar system.
 
 ## Method
 Integrate the 9-body solar system (Sun + 8 planets) for 1 year using Velocity Verlet at dt = 3600 s.
@@ -10,7 +10,7 @@ Compare initial and final total energy E = KE + PE.
 ## Theoretical expectation
 - Velocity Verlet is **symplectic**: energy errors are bounded oscillations, not secular drift.
 - The bound depends on dt and orbital frequencies.
-- For dt = 3600 s and inner planet timescales (~hours-to-days), expected relative error is order of 1e-5 to 1e-6.
+- The reported value is an endpoint comparison, not a bound over the full trajectory.
 
 ## Command
 ```bash
@@ -21,17 +21,18 @@ Compare initial and final total energy E = KE + PE.
 ```
 # Energy conservation test: 365 days, dt=3600s, 9 bodies
 # Forces: newtonian_gravity
-# Initial energy: -1.983314e+29
-# Initial |L|:    3.132326e+37
-# Final energy:   -1.983299e+29
-# Final |L|:      3.132326e+37
-# Relative energy drift:  7.656552e-06
-# Relative |L| drift:     1.785352e-08
+# Initial energy: -1.980931e+29
+# Initial |L|:    3.132030e+37
+# Final energy:   -1.980931e+29
+# Final |L|:      3.132030e+37
+# Relative energy drift:  5.002712e-12
+# Relative |L| drift:     1.206212e-15
 ```
 
 ## Error
-- **Relative energy drift**: 7.66e-6 (within expected range for Verlet at this dt)
-- **Relative angular momentum drift**: 1.79e-8 (better than energy, as expected for symplectic methods)
+- **Relative endpoint energy error**: 5.00e-12
+- **Relative endpoint angular-momentum error**: 1.21e-15
+- Earlier reports mixed `mu`-based accelerations with `G*m` diagnostics. The current diagnostic derives effective inertial masses from `mu/G`, matching the integrated equations.
 
 ## Notes
 - The "drift" here is the difference between initial and final energy. For a true symplectic integrator with bounded oscillation, this should be small but not zero (it depends on phase of the oscillation at start and end).
@@ -46,13 +47,12 @@ Compare initial and final total energy E = KE + PE.
 
 | Method | Energy drift | Angular momentum drift | Steps |
 |---|---|---|---|
-| Verlet (fixed dt=3600s) | 7.66e-6 | 1.79e-8 | 8,760 |
-| DOPRI5 (adaptive, tol=1e-10) | 7.61e-6 | 9.74e-11 | 99,243 |
+| Verlet (fixed dt=3600s) | 5.00e-12 | 1.21e-15 | 8,760 |
+| DOPRI5 (max chunk=3600s, tol=1e-10) | 2.84e-15 | 1.51e-15 | 8,760 |
 
 Observations:
-- DOPRI5 gives **200x better** angular momentum conservation
-- Energy drift is **similar** because DOPRI5 has secular drift while Verlet has bounded oscillation
-- DOPRI5 takes more steps overall
+- Both methods are near floating-point limits for this endpoint comparison.
+- This result does not establish long-term boundedness or distinguish secular from oscillatory error.
 
 ## Limitations
 - Only one test case (1 year, dt=3600s, 9 bodies)

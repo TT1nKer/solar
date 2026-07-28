@@ -20,6 +20,7 @@
 #include "solar/frame.h"
 #include "solar/iau_rotation.h"
 #include "solar/time_scale.h"
+#include "blackhole_command.h"
 
 #include <iostream>
 #include <iomanip>
@@ -65,13 +66,14 @@ static void print_usage() {
               << "  mission <template>                     Run mission (mars|gateway|grand-tour)\n"
               << "  montecarlo <template> [--samples N]    Monte Carlo uncertainty analysis\n"
               << "  network <YYYY-MM-DD>                   Solar system transfer network\n"
+              << "  blackhole <circular|photon> ...        Schwarzschild geodesic simulation\n"
               << "\n"
               << "Physics flags (for simulate/energy):\n"
               << "  --j2             Enable J2 oblateness perturbation\n"
               << "  --harmonics      Enable spherical harmonics (J2-J6)\n"
-              << "  --gr             Enable GR Schwarzschild correction\n"
+              << "  --gr             Enable 1PN Schwarzschild correction (requires --adaptive)\n"
               << "  --srp            Enable solar radiation pressure\n"
-              << "  --drag           Enable atmospheric drag\n"
+              << "  --drag           Enable atmospheric drag (requires --adaptive)\n"
               << "  --adaptive       Use DOPRI5 adaptive integrator\n"
               << "  --tol <val>      Adaptive tolerance (default 1e-10)\n"
               << "  --planets-only   Exclude moons from simulation\n";
@@ -584,6 +586,15 @@ static int cmd_energy(int argc, char* argv[]) {
             b.state.pos = b.state.pos + parent_s.pos;
             b.state.vel = b.state.vel + parent_s.vel;
         }
+    }
+
+    if (has_flag(argc, argv, "--planets-only")) {
+        std::vector<Body> planets;
+        for (const auto& body : bodies) {
+            if (body.type == BodyType::Star || body.type == BodyType::Planet)
+                planets.push_back(body);
+        }
+        bodies = std::move(planets);
     }
 
     NBodySim sim;
@@ -1233,6 +1244,7 @@ int main(int argc, char* argv[]) {
         if (cmd == "network")  return cmd_network(sub_argc, sub_argv.data());
         if (cmd == "lagrange") return cmd_lagrange(sub_argc, sub_argv.data());
         if (cmd == "halo")     return cmd_halo(sub_argc, sub_argv.data());
+        if (cmd == "blackhole") return run_blackhole_command(sub_argc, sub_argv.data());
 
         std::cerr << "Unknown command: " << cmd << "\n";
         print_usage();

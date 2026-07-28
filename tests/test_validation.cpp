@@ -24,6 +24,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <sstream>
 
 using namespace solar;
 
