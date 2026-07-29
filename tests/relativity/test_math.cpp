@@ -41,6 +41,11 @@ int main() {
     non_finite[2] = std::numeric_limits<double>::infinity();
     check("non-finite vector detected", !non_finite.all_finite());
 
+    Vec4 nan_vector = a;
+    nan_vector[1] = std::numeric_limits<double>::quiet_NaN();
+    check("max norm preserves NaN diagnostic",
+          std::isnan(max_norm(nan_vector)));
+
     check_near("explicit Minkowski contraction",
                minkowski_dot_minus_plus_plus_plus(a, b), -39.5, 0.0);
 

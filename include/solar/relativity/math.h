@@ -83,6 +83,9 @@ template <std::size_t N>
 double max_norm(const Vec<N>& value) noexcept {
     double maximum = 0.0;
     for (const double component : value.data) {
+        if (!std::isfinite(component)) {
+            return std::fabs(component);
+        }
         maximum = std::max(maximum, std::fabs(component));
     }
     return maximum;
