@@ -64,6 +64,9 @@ EventRootResult locate_event(
     if (!event.function) {
         return failed_root("event function is empty");
     }
+    if (!is_valid_event_direction(event.direction)) {
+        return failed_root("event direction is not recognized");
+    }
     if (!std::isfinite(event.root_tolerance) ||
         event.root_tolerance <= 0.0) {
         return failed_root(

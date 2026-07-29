@@ -271,6 +271,10 @@ GenericAdaptiveResult dopri5_generic_step(
         throw std::invalid_argument(
             "generic DOPRI5 time and step must be finite");
     }
+    if (t + dt == t) {
+        throw std::invalid_argument(
+            "generic DOPRI5 step must advance time");
+    }
     if (!std::isfinite(atol) || atol <= 0.0 ||
         !std::isfinite(rtol) || rtol <= 0.0) {
         throw std::invalid_argument(

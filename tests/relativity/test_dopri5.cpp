@@ -133,6 +133,11 @@ int main() {
             initial, std::numeric_limits<double>::quiet_NaN(),
             0.1, exponential_rhs, config);
     });
+    check_invalid_argument(
+        "step that cannot advance independent variable rejected", [&] {
+            (void)solar::numerics::dopri5_step(
+                initial, 1.0e20, 1.0, exponential_rhs, config);
+        });
 
     Dopri5Config<1> invalid_config = config;
     invalid_config.absolute_tolerance[0] = 0.0;

@@ -145,6 +145,25 @@ int main() {
     std::cout << "    sampled max inverse error: "
               << sampled_inverse_error << '\n';
 
+    const KerrBoyerLindquistMetric near_extremal(1.0, 0.999);
+    Contravariant4 ill_conditioned_near_horizon = equatorial;
+    ill_conditioned_near_horizon.v[1] =
+        near_extremal.outer_horizon_radius() + 3.0e-8;
+    check("ill-conditioned near-horizon BL point rejected",
+          !near_extremal.valid_point(
+              ill_conditioned_near_horizon));
+    Contravariant4 safe_near_horizon =
+        ill_conditioned_near_horizon;
+    safe_near_horizon.v[1] =
+        near_extremal.outer_horizon_radius() + 3.0e-4;
+    check("near-horizon BL point inside precision gate accepted",
+          near_extremal.valid_point(safe_near_horizon));
+    check("accepted near-horizon inverse identity below threshold",
+          inverse_identity_error(
+              near_extremal.covariant(safe_near_horizon),
+              near_extremal.contravariant(safe_near_horizon)) <
+              1.0e-10);
+
     check_near("Kerr outer horizon", kerr.outer_horizon_radius(),
                1.4358898943540672, 1.0e-15);
     check_near("Kerr inner horizon", kerr.inner_horizon_radius(),

@@ -61,6 +61,10 @@ double hamiltonian_constraint_error(
     const Metric& metric,
     const PhaseSpaceState& state,
     GeodesicKind kind) {
+    if (!is_valid_geodesic_kind(kind)) {
+        throw std::invalid_argument(
+            "Hamiltonian geodesic kind is not recognized");
+    }
     const Mat4 inverse = validated_inverse(metric, state);
     const double value = contract_hamiltonian(inverse, state.p);
     const double target = hamiltonian_target(kind);

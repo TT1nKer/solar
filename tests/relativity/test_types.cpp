@@ -34,9 +34,13 @@ int main() {
     check("null Hamiltonian target", hamiltonian_target(GeodesicKind::Null) == 0.0);
     check("timelike Hamiltonian target",
           hamiltonian_target(GeodesicKind::TimelikeUnitMass) == -0.5);
+    const auto unknown_kind = static_cast<GeodesicKind>(99);
+    check("unknown Hamiltonian target is unavailable",
+          std::isnan(hamiltonian_target(unknown_kind)));
     check("proper time exists only for timelike",
           has_proper_time(GeodesicKind::TimelikeUnitMass) &&
-          !has_proper_time(GeodesicKind::Null));
+          !has_proper_time(GeodesicKind::Null) &&
+          !has_proper_time(unknown_kind));
 
     std::cout << "\n=== Results: " << passed << " passed, " << failed
               << " failed ===\n";

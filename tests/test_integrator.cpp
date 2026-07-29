@@ -69,6 +69,11 @@ int main() {
             (void)solar::dopri5_generic_step(
                 initial, 0.0, 0.1, rhs, 0.0, 1.0e-9);
         });
+    check_throws<std::invalid_argument>(
+        "generic step must advance time", [&] {
+            (void)solar::dopri5_generic_step(
+                initial, 1.0e20, 1.0, rhs, 1.0e-9, 1.0e-9);
+        });
     check_throws<std::domain_error>(
         "generic non-finite state rejected", [&] {
             const std::vector<double> invalid{

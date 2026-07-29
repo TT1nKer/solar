@@ -84,6 +84,14 @@ int main() {
     check("no-root result has no hit",
           !wrong_direction.hit.has_value());
 
+    const auto unknown_direction = locate_event(
+        0,
+        radial_event(
+            0.3, static_cast<EventDirection>(99)),
+        dense);
+    check("unknown event direction fails",
+          unknown_direction.status == EventRootStatus::Failed);
+
     const auto any_direction = locate_event(
         1, radial_event(0.3, EventDirection::Any), dense);
     check("any-direction event found",

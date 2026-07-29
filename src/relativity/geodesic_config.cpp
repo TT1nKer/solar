@@ -9,6 +9,10 @@ namespace detail {
 
 void validate_geodesic_config(
     const GeodesicIntegrationConfig& config) {
+    if (!is_valid_geodesic_kind(config.kind)) {
+        throw std::invalid_argument(
+            "geodesic kind is not recognized");
+    }
     if (!std::isfinite(config.initial_step) ||
         config.initial_step == 0.0) {
         throw std::invalid_argument(

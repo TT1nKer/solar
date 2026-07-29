@@ -143,6 +143,10 @@ Dopri5StepResult<N> dopri5_step(
         throw std::invalid_argument(
             "DOPRI5 step must be finite and non-zero");
     }
+    if (independent_variable + step == independent_variable) {
+        throw std::invalid_argument(
+            "DOPRI5 step must advance the independent variable");
+    }
     if (!std::isfinite(config.relative_tolerance) ||
         config.relative_tolerance <= 0.0) {
         throw std::invalid_argument(

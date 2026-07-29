@@ -36,6 +36,16 @@ void check_domain_error(const char* name, Action action) {
     }
 }
 
+template <typename Action>
+void check_invalid_argument(const char* name, Action action) {
+    try {
+        action();
+        check(name, false);
+    } catch (const std::invalid_argument&) {
+        check(name, true);
+    }
+}
+
 class TimeDependentMetric final : public Metric {
 public:
     Chart chart() const noexcept override {
@@ -120,6 +130,12 @@ int main() {
                    minkowski, massive,
                    GeodesicKind::TimelikeUnitMass),
                0.0, 0.0);
+    check_invalid_argument("unknown geodesic kind rejected", [&] {
+        (void)hamiltonian_constraint_error(
+            minkowski,
+            massive,
+            static_cast<GeodesicKind>(99));
+    });
 
     PhaseSpaceState perturbed = photon;
     perturbed.p.v = Vec4{{-2.0, 2.001, 0.0, 0.0}};

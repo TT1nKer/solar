@@ -33,13 +33,14 @@ GeodesicEventSelection select_initial_any_event(
     const std::vector<GeodesicEvent>& events) {
     for (std::size_t index = 0; index < events.size(); ++index) {
         const GeodesicEvent& event = events[index];
-        if (event.direction != EventDirection::Any) {
-            continue;
-        }
         if (!event.function ||
+            !is_valid_event_direction(event.direction) ||
             !std::isfinite(event.root_tolerance) ||
             event.root_tolerance <= 0.0) {
             return failed_event("initial event contract is invalid");
+        }
+        if (event.direction != EventDirection::Any) {
+            continue;
         }
 
         double value;

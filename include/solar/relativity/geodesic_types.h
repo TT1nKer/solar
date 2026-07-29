@@ -15,6 +15,13 @@ enum class EventDirection {
     Decreasing,
 };
 
+constexpr bool is_valid_event_direction(
+    EventDirection direction) noexcept {
+    return direction == EventDirection::Any ||
+           direction == EventDirection::Increasing ||
+           direction == EventDirection::Decreasing;
+}
+
 enum class TerminationReason {
     HorizonCrossing,
     InteriorCutoff,

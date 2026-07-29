@@ -12,7 +12,8 @@ namespace solar::relativity {
  *   must satisfy abs(spin_chi)<1.
  *
  * Domain:
- *   Regular exterior r>r_++margin and away from the polar coordinate axis.
+ *   Regular exterior r>r_++margin, away from the polar coordinate axis, and
+ *   conditioned well enough for g_mu,alpha g^alpha,nu to meet 1e-10.
  *
  * Validation:
  *   tests/relativity/test_kerr_bl.cpp

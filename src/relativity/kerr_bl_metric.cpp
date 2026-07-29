@@ -11,6 +11,7 @@ namespace solar::relativity {
 namespace {
 
 constexpr double axis_sine_floor = 1.0e-12;
+constexpr double near_horizon_inverse_tolerance = 1.0e-10;
 
 struct KerrScalars {
     double radius;
@@ -24,6 +25,15 @@ struct KerrScalars {
     double dr_delta;
     double dr_A;
     double dtheta_A;
+};
+
+struct KerrTimeAzimuthBlock {
+    double covariant_tt;
+    double covariant_tphi;
+    double covariant_phiphi;
+    double contravariant_tt;
+    double contravariant_tphi;
+    double contravariant_phiphi;
 };
 
 KerrScalars evaluate_scalars(
@@ -64,6 +74,53 @@ KerrScalars evaluate_scalars(
         dr_A,
         dtheta_A,
     };
+}
+
+KerrTimeAzimuthBlock evaluate_time_azimuth_block(
+    const KerrScalars& q,
+    double mass,
+    double spin_a) {
+    const double sine_squared =
+        q.sine_theta * q.sine_theta;
+    const double sigma_delta = q.sigma * q.delta;
+    return {
+        -(1.0 - 2.0 * mass * q.radius / q.sigma),
+        -2.0 * mass * spin_a * q.radius *
+            sine_squared / q.sigma,
+        q.A * sine_squared / q.sigma,
+        -q.A / sigma_delta,
+        -2.0 * mass * spin_a * q.radius /
+            sigma_delta,
+        (q.delta - spin_a * spin_a * sine_squared) /
+            (sigma_delta * sine_squared),
+    };
+}
+
+double inverse_identity_error(
+    const KerrScalars& q,
+    const KerrTimeAzimuthBlock& block) {
+    const double tt =
+        block.covariant_tt * block.contravariant_tt +
+        block.covariant_tphi * block.contravariant_tphi;
+    const double tphi =
+        block.covariant_tt * block.contravariant_tphi +
+        block.covariant_tphi * block.contravariant_phiphi;
+    const double phit =
+        block.covariant_tphi * block.contravariant_tt +
+        block.covariant_phiphi * block.contravariant_tphi;
+    const double phiphi =
+        block.covariant_tphi * block.contravariant_tphi +
+        block.covariant_phiphi * block.contravariant_phiphi;
+    const double radial =
+        (q.sigma / q.delta) * (q.delta / q.sigma);
+    const double polar = q.sigma * (1.0 / q.sigma);
+    return std::max(
+        {std::fabs(tt - 1.0),
+         std::fabs(tphi),
+         std::fabs(phit),
+         std::fabs(phiphi - 1.0),
+         std::fabs(radial - 1.0),
+         std::fabs(polar - 1.0)});
 }
 
 void require_valid(
@@ -134,18 +191,16 @@ Mat4 KerrBoyerLindquistMetric::covariant(
     const Contravariant4& x) const {
     require_valid(*this, x);
     const KerrScalars q = evaluate_scalars(x, mass_M_, spin_a_M_);
-    const double sine_squared = q.sine_theta * q.sine_theta;
+    const KerrTimeAzimuthBlock block =
+        evaluate_time_azimuth_block(q, mass_M_, spin_a_M_);
 
     Mat4 result{};
-    result[0][0] =
-        -(1.0 - 2.0 * mass_M_ * q.radius / q.sigma);
-    result[0][3] =
-        -2.0 * mass_M_ * spin_a_M_ * q.radius *
-        sine_squared / q.sigma;
+    result[0][0] = block.covariant_tt;
+    result[0][3] = block.covariant_tphi;
     result[3][0] = result[0][3];
     result[1][1] = q.sigma / q.delta;
     result[2][2] = q.sigma;
-    result[3][3] = q.A * sine_squared / q.sigma;
+    result[3][3] = block.covariant_phiphi;
     return result;
 }
 
@@ -153,19 +208,16 @@ Mat4 KerrBoyerLindquistMetric::contravariant(
     const Contravariant4& x) const {
     require_valid(*this, x);
     const KerrScalars q = evaluate_scalars(x, mass_M_, spin_a_M_);
-    const double sine_squared = q.sine_theta * q.sine_theta;
-    const double sigma_delta = q.sigma * q.delta;
+    const KerrTimeAzimuthBlock block =
+        evaluate_time_azimuth_block(q, mass_M_, spin_a_M_);
 
     Mat4 result{};
-    result[0][0] = -q.A / sigma_delta;
-    result[0][3] =
-        -2.0 * mass_M_ * spin_a_M_ * q.radius / sigma_delta;
+    result[0][0] = block.contravariant_tt;
+    result[0][3] = block.contravariant_tphi;
     result[3][0] = result[0][3];
     result[1][1] = q.delta / q.sigma;
     result[2][2] = 1.0 / q.sigma;
-    result[3][3] =
-        (q.delta - spin_a_M_ * spin_a_M_ * sine_squared) /
-        (sigma_delta * sine_squared);
+    result[3][3] = block.contravariant_phiphi;
     return result;
 }
 
@@ -261,7 +313,15 @@ bool KerrBoyerLindquistMetric::valid_point(
         {std::fabs(radius), mass_M_, std::fabs(spin_a_M_)});
     const double delta_floor =
         64.0 * std::numeric_limits<double>::epsilon() * scale * scale;
-    return q.delta > delta_floor;
+    if (!(q.delta > delta_floor)) {
+        return false;
+    }
+    const KerrTimeAzimuthBlock block =
+        evaluate_time_azimuth_block(q, mass_M_, spin_a_M_);
+    const double identity_error =
+        inverse_identity_error(q, block);
+    return std::isfinite(identity_error) &&
+           identity_error < near_horizon_inverse_tolerance;
 }
 
 double KerrBoyerLindquistMetric::outer_stationary_limit_radius(

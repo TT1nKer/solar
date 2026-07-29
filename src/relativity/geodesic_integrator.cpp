@@ -213,6 +213,12 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
         }
         const double attempted_step =
             direction * requested_magnitude;
+        if (current.affine + attempted_step == current.affine) {
+            return terminate(
+                current,
+                TerminationReason::StepUnderflow,
+                "proposed step cannot advance the affine parameter");
+        }
 
         ++attempted_steps;
         const detail::GeodesicStepAttempt trial =

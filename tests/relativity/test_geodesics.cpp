@@ -253,6 +253,20 @@ int main() {
     check("underflow accepts no steps",
           underflow.diagnostics.accepted_steps == 0);
 
+    PhaseSpaceState unrepresentable_affine_step = photon;
+    unrepresentable_affine_step.affine = 1.0e20;
+    auto affine_resolution_config = null_config(1.0, 1.0, 1.0);
+    affine_resolution_config.max_total_steps = 1;
+    const auto affine_resolution = integrator.integrate(
+        unrepresentable_affine_step, affine_resolution_config);
+    check("unrepresentable affine advance is step underflow",
+          affine_resolution.diagnostics.reason ==
+              TerminationReason::StepUnderflow);
+    check("unrepresentable affine advance accepts no step",
+          affine_resolution.diagnostics.accepted_steps == 0);
+    check_near("unrepresentable affine advance keeps state",
+               affine_resolution.final_state.x.v[1], 0.0, 0.0);
+
     PhaseSpaceState constraint_violation = photon;
     constraint_violation.p.v[1] = 0.0;
     const auto invalid_constraint = integrator.integrate(
@@ -303,6 +317,12 @@ int main() {
         static_cast<solar::numerics::ErrorNorm>(99);
     check_invalid_argument("unknown geodesic error norm rejected", [&] {
         (void)integrator.integrate(photon, unknown_norm);
+    });
+
+    auto unknown_kind = null_config(0.1, 1.0, 1.0);
+    unknown_kind.kind = static_cast<GeodesicKind>(99);
+    check_invalid_argument("unknown geodesic kind rejected", [&] {
+        (void)integrator.integrate(photon, unknown_kind);
     });
 
     std::cout << std::setprecision(17)

@@ -122,6 +122,36 @@ int main() {
     check("initial event performs no accepted trial",
           initial_event_result.diagnostics.accepted_steps == 0);
 
+    const GeodesicEvent invalid_directed_event{
+        "missing directed event function",
+        {},
+        EventDirection::Increasing,
+        TerminationReason::UserEvent,
+        1.0e-12,
+    };
+    const auto invalid_event_contract = integrator.integrate(
+        photon(), config(), {invalid_directed_event});
+    check("invalid directed event contract fails before integration",
+          invalid_event_contract.diagnostics.reason ==
+              TerminationReason::EventRootFailure);
+    check("invalid directed event contract performs no rejected trial",
+          invalid_event_contract.diagnostics.rejected_steps == 0);
+    check("invalid directed event contract performs no accepted trial",
+          invalid_event_contract.diagnostics.accepted_steps == 0);
+
+    GeodesicEvent unknown_direction_event = initial_event;
+    unknown_direction_event.direction =
+        static_cast<EventDirection>(99);
+    const auto unknown_direction_contract = integrator.integrate(
+        photon(), config(), {unknown_direction_event});
+    check("unknown event direction fails before integration",
+          unknown_direction_contract.diagnostics.reason ==
+              TerminationReason::EventRootFailure);
+    check("unknown event direction performs no rejected trial",
+          unknown_direction_contract.diagnostics.rejected_steps == 0);
+    check("unknown event direction performs no accepted trial",
+          unknown_direction_contract.diagnostics.accepted_steps == 0);
+
     GeodesicEvent non_finite_event{
         "non-finite internal event",
         [](const PhaseSpaceState& state) {
