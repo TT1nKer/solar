@@ -1,6 +1,9 @@
 #include "solar/integrator.h"
+#include "solar/numerics/dopri5.h"
+
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 
 namespace solar {
 
@@ -97,8 +100,6 @@ static constexpr double dp_a31 = 3.0/40.0,       dp_a32 = 9.0/40.0;
 static constexpr double dp_a41 = 44.0/45.0,      dp_a42 = -56.0/15.0,     dp_a43 = 32.0/9.0;
 static constexpr double dp_a51 = 19372.0/6561.0,  dp_a52 = -25360.0/2187.0, dp_a53 = 64448.0/6561.0, dp_a54 = -212.0/729.0;
 static constexpr double dp_a61 = 9017.0/3168.0,   dp_a62 = -355.0/33.0,    dp_a63 = 46732.0/5247.0,  dp_a64 = 49.0/176.0,    dp_a65 = -5103.0/18656.0;
-static constexpr double dp_a71 = 35.0/384.0,      dp_a73 = 500.0/1113.0,   dp_a74 = 125.0/192.0,     dp_a75 = -2187.0/6784.0, dp_a76 = 11.0/84.0;
-
 // 5th-order weights (b)
 static constexpr double dp_b1 = 35.0/384.0,  dp_b3 = 500.0/1113.0, dp_b4 = 125.0/192.0;
 static constexpr double dp_b5 = -2187.0/6784.0, dp_b6 = 11.0/84.0;
@@ -108,10 +109,6 @@ static constexpr double dp_b5 = -2187.0/6784.0, dp_b6 = 11.0/84.0;
 static constexpr double dp_e1 = 71.0/57600.0,    dp_e3 = -71.0/16695.0, dp_e4 = 71.0/1920.0;
 static constexpr double dp_e5 = -17253.0/339200.0, dp_e6 = 22.0/525.0,   dp_e7 = -1.0/40.0;
 // e_i = b_i - b*_i (error coefficients)
-
-// c nodes
-static constexpr double dp_c2 = 1.0/5.0, dp_c3 = 3.0/10.0, dp_c4 = 4.0/5.0;
-static constexpr double dp_c5 = 8.0/9.0, dp_c6 = 1.0, dp_c7 = 1.0;
 
 AdaptiveResult dopri5_step(
     const std::vector<State>& states,
@@ -266,66 +263,50 @@ GenericAdaptiveResult dopri5_generic_step(
     const GenericODEFunc& f,
     double atol, double rtol)
 {
-    size_t n = y.size();
-
-    auto k1 = f(t, y);
-
-    std::vector<double> ys(n);
-
-    // k2
-    for (size_t i = 0; i < n; ++i) ys[i] = y[i] + dp_a21 * dt * k1[i];
-    auto k2 = f(t + dp_c2 * dt, ys);
-
-    // k3
-    for (size_t i = 0; i < n; ++i) ys[i] = y[i] + dt * (dp_a31*k1[i] + dp_a32*k2[i]);
-    auto k3 = f(t + dp_c3 * dt, ys);
-
-    // k4
-    for (size_t i = 0; i < n; ++i) ys[i] = y[i] + dt * (dp_a41*k1[i] + dp_a42*k2[i] + dp_a43*k3[i]);
-    auto k4 = f(t + dp_c4 * dt, ys);
-
-    // k5
-    for (size_t i = 0; i < n; ++i) ys[i] = y[i] + dt * (dp_a51*k1[i] + dp_a52*k2[i] + dp_a53*k3[i] + dp_a54*k4[i]);
-    auto k5 = f(t + dp_c5 * dt, ys);
-
-    // k6
-    for (size_t i = 0; i < n; ++i) ys[i] = y[i] + dt * (dp_a61*k1[i] + dp_a62*k2[i] + dp_a63*k3[i] + dp_a64*k4[i] + dp_a65*k5[i]);
-    auto k6 = f(t + dp_c6 * dt, ys);
-
-    // 5th-order solution
-    std::vector<double> y_new(n);
-    for (size_t i = 0; i < n; ++i) {
-        y_new[i] = y[i] + dt * (dp_b1*k1[i] + dp_b3*k3[i] + dp_b4*k4[i] + dp_b5*k5[i] + dp_b6*k6[i]);
+    if (y.empty()) {
+        throw std::invalid_argument(
+            "generic DOPRI5 state must not be empty");
+    }
+    if (!std::isfinite(t) || !std::isfinite(dt) || dt == 0.0) {
+        throw std::invalid_argument(
+            "generic DOPRI5 time and step must be finite");
+    }
+    if (!std::isfinite(atol) || atol <= 0.0 ||
+        !std::isfinite(rtol) || rtol <= 0.0) {
+        throw std::invalid_argument(
+            "generic DOPRI5 tolerances must be positive and finite");
     }
 
-    // k7 (FSAL)
-    auto k7 = f(t + dt, y_new);
-
-    // Error estimate
-    double err_max = 0.0;
-    for (size_t i = 0; i < n; ++i) {
-        double err_i = dt * (dp_e1*k1[i] + dp_e3*k3[i] + dp_e4*k4[i]
-                           + dp_e5*k5[i] + dp_e6*k6[i] + dp_e7*k7[i]);
-        double sc = atol + rtol * std::max(std::fabs(y[i]), std::fabs(y_new[i]));
-        err_max = std::max(err_max, std::fabs(err_i) / sc);
+    const std::vector<double> absolute_tolerance(y.size(), atol);
+    const auto core = numerics::detail::dopri5_step_impl(
+        y,
+        t,
+        dt,
+        f,
+        absolute_tolerance,
+        rtol,
+        0.9,
+        0.2,
+        5.0,
+        numerics::ErrorNorm::Maximum);
+    if (core.status ==
+        numerics::detail::Dopri5CoreStatus::NonFiniteState) {
+        throw std::domain_error(
+            "generic DOPRI5 state must be finite");
+    }
+    if (core.status ==
+        numerics::detail::Dopri5CoreStatus::NonFiniteDerivative) {
+        throw std::domain_error(
+            "generic DOPRI5 derivative must be finite and dimensionally valid");
     }
 
-    GenericAdaptiveResult result;
-    result.y = std::move(y_new);
-    result.dt_used = dt;
-    result.error = err_max;
-    result.accepted = (err_max <= 1.0);
-
-    double factor;
-    if (err_max > 1e-30) {
-        factor = 0.9 * std::pow(1.0 / err_max, 0.2);
-    } else {
-        factor = 5.0;
-    }
-    factor = std::max(0.2, std::min(5.0, factor));
-    result.dt_next = dt * factor;
-
-    return result;
+    return GenericAdaptiveResult{
+        core.state,
+        core.step_used,
+        core.next_step,
+        core.error,
+        core.accepted,
+    };
 }
 
 } // namespace solar

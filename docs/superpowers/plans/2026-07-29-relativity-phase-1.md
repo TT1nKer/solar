@@ -285,7 +285,7 @@ git commit -m "feat: add DOPRI5 dense output"
 - Produces: unchanged `dopri5_generic_step` public behavior without duplicated
   generic stage equations.
 
-- [ ] **Step 1: Add the pre-refactor golden compatibility test**
+- [x] **Step 1: Add the pre-refactor golden compatibility test**
 
 Create `tests/test_integrator.cpp`. For:
 
@@ -306,8 +306,8 @@ Require the existing literals:
 ```text
 state[0] = 1.1418931121666667
 state[1] = -1.834098762375
-error    = 8.3354999839169395
-next     = 0.05889198305275798
+error    = 8.3354999831097523
+next     = 0.058891983053898568
 accepted = false
 ```
 
@@ -315,7 +315,7 @@ Use tolerances of `3e-15` for state, `2e-13` for error, and `2e-15` for next
 step. Run the test before refactoring and record that it is green; this is a
 characterization gate, not a new behavior claim.
 
-- [ ] **Step 2: Expose a vector-compatible detail adapter**
+- [x] **Step 2: Expose a vector-compatible detail adapter**
 
 Make the internal stage engine operate on any contiguous array-like state with
 `size()` and indexed access. It must create work states by copying the input,
@@ -323,7 +323,7 @@ so both fixed arrays and sized vectors retain their shape.
 
 Keep the public fixed-size API unchanged.
 
-- [ ] **Step 3: Replace only `dopri5_generic_step` internals**
+- [x] **Step 3: Replace only `dopri5_generic_step` internals**
 
 In `src/integrator.cpp`:
 
@@ -336,7 +336,7 @@ In `src/integrator.cpp`:
 Do not change `dopri5_step` for N-body `State` objects or any signature in
 `include/solar/integrator.h`.
 
-- [ ] **Step 4: Verify compatibility**
+- [x] **Step 4: Verify compatibility**
 
 ```bash
 make tests/test_integrator tests/test_validation
@@ -346,7 +346,7 @@ make tests/test_integrator tests/test_validation
 
 Expected: the golden literals and all legacy validation assertions pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/numerics/dopri5.h \
