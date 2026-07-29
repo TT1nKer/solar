@@ -47,7 +47,7 @@ initialization remains in Phase 2.
 - Produces: `StateN`, `ErrorNorm`, `Dopri5Config`,
   `Dopri5StepResult`, and `dopri5_step`.
 
-- [ ] **Step 1: Read the test-quality rules before changing tests**
+- [x] **Step 1: Read the test-quality rules before changing tests**
 
 Read completely:
 
@@ -59,7 +59,7 @@ sed -n '1,400p' \
 Apply its mutation question to every new assertion: identify the production
 expression whose change would make that assertion fail.
 
-- [ ] **Step 2: Write the missing fixed-size API test**
+- [x] **Step 2: Write the missing fixed-size API test**
 
 Create `tests/relativity/test_dopri5.cpp` with a local `check` counter and:
 
@@ -80,11 +80,11 @@ const StateN<1> initial{{1.0}};
 const auto exponential_rhs =
     [](double, const StateN<1>& state) { return state; };
 const auto step = solar::numerics::dopri5_step(
-    initial, 0.0, 0.1, exponential_rhs, config);
+    initial, 0.0, 0.01, exponential_rhs, config);
 
 check("fixed DOPRI step accepted", step.accepted);
 check_near("fifth-order exponential step",
-           step.state[0], std::exp(0.1), 3.0e-9);
+           step.state[0], std::exp(0.01), 3.0e-14);
 check("accepted next step preserves direction", step.next_step > 0.0);
 ```
 
@@ -97,7 +97,7 @@ Add separate assertions that:
   safety, and factors outside `0<min_factor<=1<=max_factor` do not report a
   successful completed step.
 
-- [ ] **Step 3: Run the test and verify RED**
+- [x] **Step 3: Run the test and verify RED**
 
 ```bash
 make tests/relativity/test_dopri5
@@ -105,7 +105,7 @@ make tests/relativity/test_dopri5
 
 Expected: compilation fails because `solar/numerics/dopri5.h` does not exist.
 
-- [ ] **Step 4: Implement the shared stage engine and fixed wrapper**
+- [x] **Step 4: Implement the shared stage engine and fixed wrapper**
 
 In `include/solar/numerics/dopri5.h`, define the public API from the design and
 one `detail::dopri5_step_impl<State,Rhs>` used by the fixed wrapper.
@@ -159,7 +159,7 @@ next_step = std::copysign(std::fabs(step) * factor, step);
 
 Do not implement dense output in this task.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 ```bash
 make tests/relativity/test_dopri5
@@ -169,7 +169,7 @@ make tests/relativity/test_dopri5
 Expected: all fixed-step/controller assertions pass with no new compiler
 warning.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/numerics/dopri5.h \
