@@ -556,15 +556,20 @@ git commit -m "feat: add directed geodesic events"
 
 **Files:**
 - Create: `include/solar/relativity/geodesic_integrator.h`
+- Create: `src/relativity/geodesic_config.cpp`
+- Create: `src/relativity/geodesic_config_internal.h`
+- Create: `src/relativity/geodesic_step_attempt.cpp`
+- Create: `src/relativity/geodesic_step_attempt.h`
 - Create: `src/relativity/geodesic_integrator.cpp`
 - Create: `tests/relativity/test_geodesics.cpp`
+- Create: `tests/relativity/test_geodesic_failures.cpp`
 
 **Interfaces:**
 - Consumes: Tasks 1–5.
 - Produces: `GeodesicIntegrationConfig`,
   `GeodesicIntegrationResult`, and `GeodesicIntegrator`.
 
-- [ ] **Step 1: Write Minkowski null and timelike line tests**
+- [x] **Step 1: Write Minkowski null and timelike line tests**
 
 For the null state `p=(-1,1,0,0)`, use:
 
@@ -590,7 +595,7 @@ For timelike `p=(-1.25,0.75,0,0)`, integrate affine `4` and require
 `x0=5`, `x1=3`, `H=-1/2`, and `MaxProperTime` when a proper-time limit of `4`
 is configured.
 
-- [ ] **Step 2: Write limit, event, and reversibility tests**
+- [x] **Step 2: Write limit, event, and reversibility tests**
 
 Add:
 
@@ -606,7 +611,7 @@ Add:
 - invalid initial constraint, NaN state, zero/underflowing step, and invalid
   config return/throw according to the design.
 
-- [ ] **Step 3: Run and verify RED**
+- [x] **Step 3: Run and verify RED**
 
 ```bash
 make tests/relativity/test_geodesics
@@ -614,7 +619,7 @@ make tests/relativity/test_geodesics
 
 Expected: `geodesic_integrator.h` is absent.
 
-- [ ] **Step 4: Implement config validation and CPU defaults**
+- [x] **Step 4: Implement config validation and CPU defaults**
 
 Set per-component tolerances:
 
@@ -631,7 +636,7 @@ for (std::size_t i = 4; i < 8; ++i) {
 Set the exact controller, step, rejection, total-step, and constraint defaults
 from Global Constraints. Reject null `max_proper_time`.
 
-- [ ] **Step 5: Implement the accepted/rejected loop**
+- [x] **Step 5: Implement the accepted/rejected loop**
 
 Use a small private adapter that unpacks `(affine,state8)`, invokes
 `HamiltonGeodesicRhs`, and repacks the derivative.
@@ -651,7 +656,7 @@ On each attempt:
 
 Do not allocate a trajectory vector and do not project momentum.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 ```bash
 make tests/relativity/test_geodesics
@@ -661,7 +666,7 @@ make tests/relativity/test_geodesics
 Expected: all analytic lines, limits, events, error paths, and reversibility
 pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add include/solar/relativity/geodesic_integrator.h \
