@@ -83,11 +83,30 @@ extension. Event roots require a sign bracket and use safeguarded
 secant/bisection with a 100-iteration cap. No default momentum projection is
 present.
 
+## Independent references
+
+- SciPy's `RK45` source was used as an independent implementation reference
+  for the Dormand–Prince tableau, embedded error, controller order, and quartic
+  dense-extension matrix:
+  <https://github.com/scipy/scipy/blob/main/scipy/integrate/_ivp/rk.py>.
+- The Carter quantity used only by the audit probe follows the convention
+  written explicitly by RAPTOR, with `E=-p_t`, `L=p_phi`, and covariant
+  `p_theta`:
+  <https://doi.org/10.1051/0004-6361/201732149>.
+- The high-precision Schwarzschild oracle integrates the independently
+  separated radial equation. Dexter and Agol describe this analytic Kerr
+  photon-orbit reference family:
+  <https://arxiv.org/abs/0903.0620>.
+- The Black Hole Perturbation Toolkit's maintained KerrGeodesics package is a
+  future Phase 2/3 cross-check for constants, special orbits, and Mino-time
+  frequencies; no package code was copied:
+  <https://bhptoolkit.org/KerrGeodesics/>.
+
 ## Verified source state and platform
 
 ```text
 Verified code commit:
-57b65256094e6d6b41c32ffd2906310b0ed4b134
+1bf7442c141e5440642af18677dc8680f96bfc9d
 
 Darwin 23.6.0 arm64
 Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -116,7 +135,8 @@ make clean
 make CXXFLAGS='-std=c++17 -O1 -g -Wall -Wextra -Iinclude \
   -fsanitize=address,undefined -fno-omit-frame-pointer' \
   $(find tests/relativity -name 'test_*.cpp' -type f | sort | \
-    sed 's/\.cpp$//')
+    sed 's/\.cpp$//') \
+  tests/test_integrator
 ```
 
 Every relativity executable was then run individually with:
@@ -126,6 +146,11 @@ ASAN_OPTIONS=detect_leaks=0:halt_on_error=1
 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
 ```
 
+The legacy `tests/test_integrator` executable was included in the sanitizer
+run because the shared vector DOPRI adapter changed. Independent audit probes
+were compiled from standard input to `/tmp`; they did not add a second
+production solver or source file.
+
 A second `make clean`, normal `make`, and `make test` restored and revalidated
 the release artifacts after sanitizer testing.
 
@@ -133,27 +158,28 @@ the release artifacts after sanitizer testing.
 
 | Executable | Passed | Failed |
 |---|---:|---:|
-| `test_dopri5` | 49 | 0 |
+| `test_dopri5` | 50 | 0 |
 | `test_dual4` | 25 | 0 |
-| `test_geodesic_events` | 28 | 0 |
-| `test_geodesic_failures` | 10 | 0 |
-| `test_geodesics` | 49 | 0 |
+| `test_geodesic_events` | 29 | 0 |
+| `test_geodesic_failures` | 16 | 0 |
+| `test_geodesics` | 53 | 0 |
 | `test_geodesics_kerr` | 11 | 0 |
 | `test_geodesics_schwarzschild` | 11 | 0 |
-| `test_hamiltonian` | 26 | 0 |
-| `test_kerr_bl` | 49 | 0 |
+| `test_hamiltonian` | 27 | 0 |
+| `test_kerr_bl` | 52 | 0 |
 | `test_math` | 15 | 0 |
 | `test_metric_cli` | 18 | 0 |
 | `test_metric_derivatives` | 3 | 0 |
 | `test_metrics` | 70 | 0 |
-| `test_types` | 8 | 0 |
+| `test_types` | 9 | 0 |
 | `test_units` | 14 | 0 |
-| Relativity subtotal | 386 | 0 |
-| Fixture-independent legacy assertions | 66 | 0 |
-| Total | 452 | 0 |
+| Relativity subtotal | 403 | 0 |
+| Fixture-independent legacy assertions | 67 | 0 |
+| Total | 470 | 0 |
 
-All 386 relativity assertions also passed under AddressSanitizer and
-UndefinedBehaviorSanitizer with no runtime diagnostic.
+All 403 relativity assertions and the 11 assertions in the legacy generic
+DOPRI adapter test passed under AddressSanitizer and UndefinedBehaviorSanitizer
+with no runtime diagnostic.
 
 The optional `data/de440.asc` fixture was absent, so its eight external-data
 assertions were visibly skipped and are not counted. `test_horizons` remains a
@@ -214,6 +240,53 @@ Carter diagnostic:             NaN (unavailable by design)
 
 All ordinary-ray constraint maxima are below the v3 `1e-10` gate.
 
+Independent audit probes added the following evidence:
+
+```text
+Kerr BL inverse-domain grid:
+  samples:                         630
+  accepted / rejected:            400 / 230
+  max identity error of accepted: 9.6970431684439973e-11
+
+Generic Kerr null ray, M=1, chi=0.7:
+  Carter Q initial:               0.63025967454011267
+  Carter Q relative drift:        3.4816594052244909e-13
+  max normalized H error:         1.0308064230364652e-12
+  E / Lz drift:                   0 / 0
+  default vs tighter-tolerance
+    final-state max difference:   9.6932240012392867e-11
+
+Schwarzschild weak bending, b=100, endpoint r=10000:
+  high-precision separated oracle: 0.04122253979927865174945
+  C++ Hamilton result:             0.041222539797915125
+  absolute / relative difference:  1.36352674945e-12
+                                   3.30772134879e-11
+  max_step 20,10,5,2.5 spread:     <=1.33e-12 per refinement
+```
+
+The Carter calculation remains audit-only: the public Carter diagnostic is
+still NaN, so this does not claim Phase 2 functionality.
+
+## Independent audit fixes
+
+1. A finite nonzero DOPRI step could be smaller than the floating-point ULP of
+   a large independent variable. The eight-component state advanced while the
+   affine parameter remained frozen. Fixed-size and legacy DOPRI entry points
+   now reject that input; the geodesic flow maps it to `StepUnderflow` before
+   committing any state.
+2. Directed event contracts were not validated until after a successful
+   trial. A malformed event could perform expensive rejected work or be hidden
+   behind a metric-domain outcome. Every event function, tolerance, and
+   direction is now validated before integration.
+3. Unknown `GeodesicKind` and `EventDirection` values silently selected
+   timelike/decreasing behavior. Entry points now reject unknown enum values,
+   while the standalone invalid Hamiltonian target is explicitly NaN.
+4. The previous Kerr BL domain admitted near-horizon points whose double
+   precision metric/inverse identity residual reached `4.24e-7`. The geometric
+   exterior check is now supplemented by the v3 `1e-10` numerical
+   inverse-identity gate. Such points are `InvalidMetricPoint`, never
+   `HorizonCrossing`.
+
 ## Failure and mutation evidence
 
 - Negating a nonzero dense-extension coefficient caused both midpoint and
@@ -224,7 +297,7 @@ All ordinary-ray constraint maxima are below the v3 `1e-10` gate.
   two-component RMS assertion to fail.
 - Reclassifying an invalid metric-domain trial as a horizon caused
   `test_geodesic_failures` to exit nonzero; restoring
-  `InvalidMetricPoint` returned it to 10/10.
+  `InvalidMetricPoint` returned it to 16/16.
 - Extremely tight but finite tolerances exercise overflow-resistant RMS
   accumulation. Unknown norm enums and overflowing constraint denominators
   are rejected rather than silently accepted.
@@ -237,41 +310,54 @@ All ordinary-ray constraint maxima are below the v3 `1e-10` gate.
    `max_step`.
 2. Boyer–Lindquist remains singular at the horizon. `InvalidMetricPoint` is a
    chart-domain outcome, not evidence of capture; physical crossing requires
-   Phase 3 Kerr–Schild coordinates and an explicit horizon event.
-3. Long bound timelike trajectories use adaptive DOPRI5, not a
+   Phase 4 Kerr–Schild coordinates and an explicit horizon event.
+3. The Kerr BL numerical precision gate is stricter than the geometric
+   exterior and may shift slightly across floating-point platforms. A rejected
+   near-horizon BL point must not be reclassified as capture.
+4. Long bound timelike trajectories use adaptive DOPRI5, not a
    structure-preserving method. Secular invariant drift beyond the short
    ordinary tests is not characterized.
-4. Coordinate canonical states are caller-supplied. Until Phase 2 tetrads and
+5. Coordinate canonical states are caller-supplied. Until Phase 2 tetrads and
    observer-frequency normalization exist, a caller can provide a null state
    with physically unintended local direction even if the Hamiltonian
    constraint is valid.
-5. CPU `double` and ordinary summation remain authoritative. Near-extremal,
+6. The universal tolerance factory follows the v3 component defaults but does
+   not know whether spatial coordinates are Cartesian lengths or BL angles.
+   Non-unit mass scales need chart-specific convergence evidence.
+7. CPU `double` and ordinary summation remain authoritative. Near-extremal,
    near-margin, very large-momentum, and long-duration cases lack a
    multiprecision oracle.
-6. E and Lz monitoring is opt-in and meaningful only when the caller knows
+8. E and Lz monitoring is opt-in and meaningful only when the caller knows
    the metric has the corresponding symmetries. Carter remains unavailable.
-7. Only Apple Clang 16 on macOS arm64 was verified locally; GCC/Linux and
+9. Only Apple Clang 16 on macOS arm64 was verified locally; GCC/Linux and
    other floating-point environments may expose portability or threshold
    differences.
 
 ## Fastest way to falsify
 
 1. `./tests/relativity/test_dopri5`: wrong tableau, RMS, component scale,
-   controller sign, dense coefficient, or non-finite handling must fail.
+   controller sign, dense coefficient, non-finite handling, or
+   non-advancing independent variable must fail.
 2. `./tests/relativity/test_hamiltonian`: wrong variance/order, target,
    denominator, derivative dimension, sign, or `1/2` must fail.
 3. `./tests/relativity/test_geodesic_events` and
-   `./tests/relativity/test_geodesic_failures`: direction, bracket, iteration,
-   trial-domain, and root-failure semantics must remain explicit.
+   `./tests/relativity/test_geodesic_failures`: malformed contracts, unknown
+   directions, bracket, iteration, trial-domain, and root-failure semantics
+   must remain explicit.
 4. `./tests/relativity/test_geodesics`: analytic Minkowski lines, limits,
-   first-event selection, and reversal must pass.
+   first-event selection, reversal, and affine-resolution underflow must pass.
 5. `./tests/relativity/test_geodesics_schwarzschild`: radial null,
    photon-sphere, and weak-bending gates must pass. Halve `max_step`; a
    nonconvergent result falsifies the ordinary-ray claim.
 6. `./tests/relativity/test_geodesics_kerr`: maximum constraint must remain
    below `1e-10`, E/Lz must remain zero for the tested metric, and Carter must
    remain NaN.
-7. Rebuild all relativity tests with ASan/UBSan. Any diagnostic invalidates
+7. `./tests/relativity/test_kerr_bl`: the unsafe `chi=0.999`,
+   `r=r_++3e-8` point must remain rejected while the safe comparison point
+   satisfies the `1e-10` identity gate.
+8. Re-run the high-precision Schwarzschild radial integral; disagreement above
+   the documented numerical error falsifies the bending path.
+9. Rebuild all relativity tests with ASan/UBSan. Any diagnostic invalidates
    this gate.
 
 ## Not completed
@@ -285,6 +371,9 @@ All ordinary-ray constraint maxima are below the v3 `1e-10` gate.
 - Disk/material models, radiative transfer, reference renderer, image/movie
   pipeline, Solar Local Patch, WASM/GPU, UI, or visual regression.
 - DE440 external-fixture assertions and GCC/Linux verification.
+- The one-off Carter-Q, Kerr inverse-domain, convergence, and multiprecision
+  audit probes are supplementary evidence, not committed CI regression
+  executables.
 
 ## Result
 
