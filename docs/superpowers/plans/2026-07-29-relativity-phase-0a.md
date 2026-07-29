@@ -38,7 +38,7 @@ standalone executable tests.
 - Produces: recursive `SRCS`/`TEST_SRCS`, truthful aggregate test exit status,
   portable baseline tests, and phase evidence.
 
-- [ ] **Step 1: Record the untouched baseline**
+- [x] **Step 1: Record the untouched baseline**
 
 Run:
 
@@ -53,7 +53,7 @@ make test
 Expected: build succeeds with existing warnings; the test build fails because
 `std::ostringstream` is incomplete in `test_validation.cpp`.
 
-- [ ] **Step 2: Apply the minimum portability correction**
+- [x] **Step 2: Apply the minimum portability correction**
 
 Add:
 
@@ -65,7 +65,7 @@ to `tests/test_validation.cpp`. In `test_de.cpp`, return success with an
 explicit `SKIP` only when the default optional fixture is absent; preserve a
 nonzero result for an explicitly supplied invalid path.
 
-- [ ] **Step 3: Close recursive build and test failure propagation**
+- [x] **Step 3: Close recursive build and test failure propagation**
 
 Use:
 
@@ -76,7 +76,7 @@ TEST_SRCS := $(shell find tests -name 'test_*.cpp' -type f | sort)
 
 and accumulate a nonzero child-test status in the `test` recipe before exiting.
 
-- [ ] **Step 4: Verify the repaired old baseline**
+- [x] **Step 4: Verify the repaired old baseline**
 
 Run:
 
@@ -96,13 +96,13 @@ make test
 Expected: old suite passes or explicitly skips default DE440; the explicit
 missing DE440 path exits 1; smoke outputs match the recorded validation values.
 
-- [ ] **Step 5: Write the audit, baseline, and initial status**
+- [x] **Step 5: Write the audit, baseline, and initial status**
 
 Document actual interfaces, reusability decisions, observed outputs, warnings,
 model boundary, and fastest falsification commands. Set Phase −1 passed only
 after every Phase −1 gate has evidence.
 
-- [ ] **Step 6: Commit Phase −1 artifacts**
+- [x] **Step 6: Commit Phase −1 artifacts**
 
 ```bash
 git add Makefile tests/test_de.cpp tests/test_validation.cpp \
@@ -125,7 +125,7 @@ git commit -m "docs: record solar relativity phase minus one"
   `length_si_to_M`, `length_M_to_si`, `time_si_to_M`, `time_M_to_si`,
   and `velocity_si_to_c`.
 
-- [ ] **Step 1: Write the failing unit test**
+- [x] **Step 1: Write the failing unit test**
 
 Exercise one-solar-mass references:
 
@@ -141,7 +141,7 @@ check_near("length round trip",
 Also require invalid mass and non-finite conversion input to throw
 `std::invalid_argument`.
 
-- [ ] **Step 2: Verify the unit test fails for the missing API**
+- [x] **Step 2: Verify the unit test fails for the missing API**
 
 Run:
 
@@ -151,7 +151,7 @@ make tests/relativity/test_units
 
 Expected: compilation fails because `solar/relativity/units.h` is absent.
 
-- [ ] **Step 3: Implement the minimum checked conversion API**
+- [x] **Step 3: Implement the minimum checked conversion API**
 
 Compute SI constants from existing kilometre-based Solar constants:
 
@@ -164,7 +164,7 @@ const double c_si = constants::C_LIGHT * km_to_m;
 
 Reject non-finite/non-positive mass and non-finite conversion inputs.
 
-- [ ] **Step 4: Verify units**
+- [x] **Step 4: Verify units**
 
 Run:
 
@@ -175,7 +175,7 @@ make tests/relativity/test_units
 
 Expected: all unit reference, round-trip, and invalid-input checks pass.
 
-- [ ] **Step 5: Commit units**
+- [x] **Step 5: Commit units**
 
 ```bash
 git add include/solar/relativity/units.h src/relativity/units.cpp \
@@ -198,7 +198,7 @@ git commit -m "feat: add checked geometric unit conversions"
   `Contravariant4`, `Covariant4`, `GeodesicKind`, `PhaseSpaceState`, and
   `GeodesicSample`.
 
-- [ ] **Step 1: Write failing vector and tensor-type tests**
+- [x] **Step 1: Write failing vector and tensor-type tests**
 
 Require:
 
@@ -214,7 +214,7 @@ static_assert(!std::is_convertible_v<Contravariant4, Covariant4>);
 Require identity recovery from a hand-derived nonsingular matrix and
 `std::domain_error` for a matrix with duplicate rows.
 
-- [ ] **Step 2: Verify math tests fail for missing APIs**
+- [x] **Step 2: Verify math tests fail for missing APIs**
 
 Run:
 
@@ -224,13 +224,13 @@ make tests/relativity/test_math tests/relativity/test_types
 
 Expected: compilation fails because the new headers are absent.
 
-- [ ] **Step 3: Implement vectors and matrices**
+- [x] **Step 3: Implement vectors and matrices**
 
 Use partial-pivot Gauss–Jordan inversion with an epsilon-scaled pivot test.
 Do not define an unnamed/default four-dimensional Euclidean dot product.
 Reject zero/non-finite scalar division and non-finite/singular inversion.
 
-- [ ] **Step 4: Implement strongly wrapped states**
+- [x] **Step 4: Implement strongly wrapped states**
 
 Use the v3 contract:
 
@@ -248,7 +248,7 @@ struct PhaseSpaceState {
 Give `GeodesicSample::proper_time` a quiet-NaN default so null paths cannot
 accidentally report coordinate time as proper time.
 
-- [ ] **Step 5: Verify math and types**
+- [x] **Step 5: Verify math and types**
 
 Run:
 
@@ -261,7 +261,7 @@ make tests/relativity/test_math tests/relativity/test_types
 Expected: arithmetic, contraction, inverse, singular-domain, variance, and
 proper-time convention checks pass.
 
-- [ ] **Step 6: Commit math and types**
+- [x] **Step 6: Commit math and types**
 
 ```bash
 git add include/solar/relativity/math.h include/solar/relativity/types.h \
@@ -280,7 +280,7 @@ git commit -m "feat: add strong spacetime math types"
 - Produces: `Dual4::variable`, arithmetic with Dual4/scalars, unary negation,
   `sqrt`, `sin`, `cos`, `log`, `atan2`, and finite checks.
 
-- [ ] **Step 1: Write the failing derivative tests**
+- [x] **Step 1: Write the failing derivative tests**
 
 For independent variables `x=2`, `y=3`, require the hand-derived result for
 `f=x*x*y + sin(y)`:
@@ -294,7 +294,7 @@ check_near("df/dy", f.derivative[1], 4.0 + std::cos(3.0), 1e-14);
 Also test quotient, square-root/log chains, `atan2`, invalid variable index,
 zero division, and invalid elementary-function domains.
 
-- [ ] **Step 2: Verify the Dual4 test fails for the missing API**
+- [x] **Step 2: Verify the Dual4 test fails for the missing API**
 
 Run:
 
@@ -304,7 +304,7 @@ make tests/relativity/test_dual4
 
 Expected: compilation fails because `solar/relativity/dual4.h` is absent.
 
-- [ ] **Step 3: Implement the minimum forward-mode algebra**
+- [x] **Step 3: Implement the minimum forward-mode algebra**
 
 Represent:
 
@@ -318,7 +318,7 @@ struct Dual4 {
 Apply product, quotient, and chain rules directly. Reject mathematical domain
 violations without clamping.
 
-- [ ] **Step 4: Verify Dual4**
+- [x] **Step 4: Verify Dual4**
 
 Run:
 
@@ -329,7 +329,7 @@ make tests/relativity/test_dual4
 
 Expected: all analytic derivative and failure-domain checks pass.
 
-- [ ] **Step 5: Commit Dual4**
+- [x] **Step 5: Commit Dual4**
 
 ```bash
 git add include/solar/relativity/dual4.h tests/relativity/test_dual4.cpp
@@ -347,13 +347,13 @@ git commit -m "feat: add four-variable forward autodiff"
 - Consumes: tested Phase 0A code and actual command results.
 - Produces: human-readable contract identical to code and a truthful phase gate.
 
-- [ ] **Step 1: Write conventions matching code**
+- [x] **Step 1: Write conventions matching code**
 
 Document signature, coordinate order, spin axis, geometric units, tensor
 variance, state normalization, null proper time, input failures, and the
 fixed-background model boundary.
 
-- [ ] **Step 2: Run focused and full verification**
+- [x] **Step 2: Run focused and full verification**
 
 Run:
 
@@ -371,7 +371,7 @@ git diff --check
 Expected: exit 0 for every command; known legacy compile warnings remain
 recorded rather than hidden.
 
-- [ ] **Step 3: Confirm recursive clean behavior**
+- [x] **Step 3: Confirm recursive clean behavior**
 
 Run:
 
@@ -386,13 +386,13 @@ make test
 Expected: nested objects and executables are removed, rediscovered, rebuilt,
 and executed.
 
-- [ ] **Step 4: Update status from fresh evidence**
+- [x] **Step 4: Update status from fresh evidence**
 
 Set `CURRENT_PHASE: 0A` and `PHASE_STATE: PASSED` only if every Phase −1 and
 0A requirement is present and all required commands pass. Record the verified
 commit and platform; list at least three plausible failure modes.
 
-- [ ] **Step 5: Commit phase gate documentation**
+- [x] **Step 5: Commit phase gate documentation**
 
 ```bash
 git add docs/relativity/CONVENTIONS.md docs/validation/relativity_00_baseline.md \

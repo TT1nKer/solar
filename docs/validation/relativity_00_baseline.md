@@ -150,8 +150,61 @@ Lambert time of flight: 312.000 days
 ## Result
 
 Phase −1 baseline behavior is repaired and reproducible on this platform.
-Phase −1 remains in progress until the nested Phase 0A sources prove recursive
-build and clean behavior in the final full suite.
+Nested Phase 0A sources subsequently proved recursive build, header dependency,
+test execution, and clean behavior.
+
+## Phase 0A final verification
+
+Verified commit:
+
+```text
+17498e3acda494b7cb9d122827f5d2fa88b803ee
+```
+
+Commands:
+
+```bash
+make clean
+test ! -e src/relativity/units.o
+test ! -e src/relativity/units.d
+test ! -e tests/relativity/test_units
+test ! -e tests/relativity/test_units.d
+make
+make test
+./tests/relativity/test_units
+./tests/relativity/test_math
+./tests/relativity/test_types
+./tests/relativity/test_dual4
+git diff --check
+```
+
+Actual result:
+
+```text
+Phase 0A test_units: 14 passed, 0 failed
+Phase 0A test_math:  14 passed, 0 failed
+Phase 0A test_types: 8 passed, 0 failed
+Phase 0A test_dual4: 25 passed, 0 failed
+Legacy test_kepler: 16 passed, 0 failed
+Legacy test_montecarlo: 13 passed, 0 failed
+Legacy test_network: 13 passed, 0 failed
+Legacy test_validation: 14 passed, 0 failed
+Legacy test_de: SKIP because default external fixture is absent
+Legacy test_horizons: print-only, exit 0
+```
+
+Unique assertion result: 117 passed, 0 failed, eight DE440 assertions skipped.
+All required commands exited 0. The seven pre-existing compiler warnings remain.
+
+Header dependency check:
+
+```bash
+touch include/solar/relativity/dual4.h
+make tests/relativity/test_dual4
+```
+
+Actual output included a new compile command for
+`tests/relativity/test_dual4.cpp`; the stale-binary defect is closed.
 
 ## Limitations
 
@@ -160,6 +213,8 @@ build and clean behavior in the final full suite.
 - The seven existing compiler warnings remain.
 - Smoke commands reproduce documented examples; they do not independently
   validate the physical models.
+- Phase 0A validates foundational arithmetic and derivatives, not any spacetime
+  metric or geodesic.
 
 ## Fastest falsification
 
