@@ -109,6 +109,42 @@ int main() {
           covariant[0][0] * covariant[3][3] -
               covariant[0][3] * covariant[3][0] < 0.0);
 
+    struct KerrInverseCase {
+        double mass;
+        double spin_chi;
+        Contravariant4 point;
+    };
+    const KerrInverseCase inverse_cases[] = {
+        {1.0, 0.99, Contravariant4{Vec4{{0.0, 2.0, 0.4, 0.0}}}},
+        {2.3, -0.7, Contravariant4{Vec4{{1.0, 15.0, 2.0, -0.2}}}},
+        {0.4, 0.3, Contravariant4{Vec4{{-2.0, 5.0, 1.3, 0.7}}}},
+    };
+    double sampled_inverse_error = 0.0;
+    bool sampled_signatures_are_lorentzian = true;
+    for (const KerrInverseCase& test_case : inverse_cases) {
+        const KerrBoyerLindquistMetric sampled_metric(
+            test_case.mass, test_case.spin_chi);
+        const Mat4 sampled_covariant =
+            sampled_metric.covariant(test_case.point);
+        const Mat4 sampled_contravariant =
+            sampled_metric.contravariant(test_case.point);
+        sampled_inverse_error = std::max(
+            sampled_inverse_error,
+            inverse_identity_error(
+                sampled_covariant, sampled_contravariant));
+        sampled_signatures_are_lorentzian &=
+            sampled_covariant[1][1] > 0.0 &&
+            sampled_covariant[2][2] > 0.0 &&
+            sampled_covariant[0][0] * sampled_covariant[3][3] -
+                sampled_covariant[0][3] * sampled_covariant[3][0] < 0.0;
+    }
+    check("Kerr inverse identity across sampled exterior points",
+          sampled_inverse_error < 5.0e-13);
+    check("Kerr signature across sampled exterior points",
+          sampled_signatures_are_lorentzian);
+    std::cout << "    sampled max inverse error: "
+              << sampled_inverse_error << '\n';
+
     check_near("Kerr outer horizon", kerr.outer_horizon_radius(),
                1.4358898943540672, 1.0e-15);
     check_near("Kerr inner horizon", kerr.inner_horizon_radius(),
