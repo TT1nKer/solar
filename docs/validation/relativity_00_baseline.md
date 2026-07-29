@@ -158,7 +158,7 @@ test execution, and clean behavior.
 Verified commit:
 
 ```text
-17498e3acda494b7cb9d122827f5d2fa88b803ee
+210450b1db3a9903a608db74a67c75c6b847b28b
 ```
 
 Commands:
@@ -182,7 +182,7 @@ Actual result:
 
 ```text
 Phase 0A test_units: 14 passed, 0 failed
-Phase 0A test_math:  14 passed, 0 failed
+Phase 0A test_math:  15 passed, 0 failed
 Phase 0A test_types: 8 passed, 0 failed
 Phase 0A test_dual4: 25 passed, 0 failed
 Legacy test_kepler: 16 passed, 0 failed
@@ -193,7 +193,7 @@ Legacy test_de: SKIP because default external fixture is absent
 Legacy test_horizons: print-only, exit 0
 ```
 
-Unique assertion result: 117 passed, 0 failed, eight DE440 assertions skipped.
+Unique assertion result: 118 passed, 0 failed, eight DE440 assertions skipped.
 All required commands exited 0. The seven pre-existing compiler warnings remain.
 
 Header dependency check:

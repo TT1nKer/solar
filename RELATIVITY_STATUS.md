@@ -2,7 +2,7 @@
 
 CURRENT_PHASE: 0A
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: 17498e3acda494b7cb9d122827f5d2fa88b803ee
+LAST_VERIFIED_COMMIT: 210450b1db3a9903a608db74a67c75c6b847b28b
 LAST_VERIFIED_PLATFORM: macOS 14.8.7 arm64 / Apple Clang 16.0.0
 LAST_VERIFIED_COMMANDS:
 - `make clean`
@@ -28,7 +28,7 @@ ACTUALLY_COMPLETED:
 - Added fixed-size vectors, explicit Minkowski contraction, 4x4 multiplication/inversion, finite checks, and tensor-variance wrappers.
 - Added PhaseSpaceState and GeodesicSample value contracts.
 - Added four-coordinate forward automatic differentiation with checked domain failures.
-- Passed 61/61 Phase 0A assertions and 56/56 fixture-independent legacy assertions.
+- Passed 62/62 Phase 0A assertions and 56/56 fixture-independent legacy assertions.
 
 NOT_COMPLETED:
 - Minkowski, Schwarzschild, or Kerr metric implementations.
