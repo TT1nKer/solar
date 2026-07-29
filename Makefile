@@ -1,5 +1,6 @@
 CXX      := g++
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Iinclude
+DEPFLAGS := -MMD -MP
 AR       := ar
 
 SRC_DIR  := src
@@ -15,6 +16,7 @@ CLI_BIN  := solar
 
 TEST_SRCS := $(shell find $(TEST_DIR) -name 'test_*.cpp' -type f | sort)
 TEST_BINS := $(TEST_SRCS:.cpp=)
+DEPFILES  := $(OBJS:.o=.d) $(CLI_BIN:=.d) $(TEST_BINS:=.d)
 
 .PHONY: all clean test
 
@@ -24,10 +26,10 @@ $(LIB): $(OBJS)
 	$(AR) rcs $@ $^
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@
 
 $(CLI_BIN): $(CLI_SRC) $(LIB)
-	$(CXX) $(CXXFLAGS) $< -L. -lsolar -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -MF $@.d $< -L. -lsolar -o $@
 
 test: $(TEST_BINS)
 	@status=0; \
@@ -38,7 +40,9 @@ test: $(TEST_BINS)
 	exit $$status
 
 $(TEST_DIR)/%: $(TEST_DIR)/%.cpp $(LIB)
-	$(CXX) $(CXXFLAGS) $< -L. -lsolar -o $@
+	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -MF $@.d $< -L. -lsolar -o $@
 
 clean:
-	rm -f $(OBJS) $(LIB) $(CLI_BIN) $(TEST_BINS)
+	rm -f $(OBJS) $(LIB) $(CLI_BIN) $(TEST_BINS) $(DEPFILES)
+
+-include $(DEPFILES)
