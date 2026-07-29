@@ -366,7 +366,7 @@ git commit -m "refactor: share generic DOPRI5 stages"
 - Produces: `PhaseSpaceDerivative`, Hamiltonian/constraint functions,
   pack/unpack, and `HamiltonGeodesicRhs`.
 
-- [ ] **Step 1: Write exact Minkowski Hamiltonian tests**
+- [x] **Step 1: Write exact Minkowski Hamiltonian tests**
 
 Add:
 
@@ -392,7 +392,7 @@ For velocity `v=0.6`, use `gamma=1.25` and
 Add pack/unpack round-trip and a hand-computed normalized constraint error for
 `p=(-2,2.001,0,0)`.
 
-- [ ] **Step 2: Add the no-false-symmetry test**
+- [x] **Step 2: Add the no-false-symmetry test**
 
 In the test, define a minimal `TimeDependentMetric`:
 
@@ -410,7 +410,7 @@ dp_t = +0.05
 Also require exact `dp_t=dp_phi=0` for Schwarzschild and Kerr BL at valid
 points.
 
-- [ ] **Step 3: Run and verify RED**
+- [x] **Step 3: Run and verify RED**
 
 ```bash
 make tests/relativity/test_hamiltonian
@@ -418,7 +418,7 @@ make tests/relativity/test_hamiltonian
 
 Expected: compilation fails because `hamiltonian.h` is absent.
 
-- [ ] **Step 4: Implement the exact contractions**
+- [x] **Step 4: Implement the exact contractions**
 
 Use two explicit four-dimensional loops:
 
@@ -437,7 +437,7 @@ value of every matrix-momentum term as required by v3. Reject non-finite
 affine/state/momentum and invalid metric points; do not clamp or return a
 fallback derivative.
 
-- [ ] **Step 5: Verify GREEN and derivative mutation**
+- [x] **Step 5: Verify GREEN and derivative mutation**
 
 ```bash
 make tests/relativity/test_hamiltonian
@@ -447,7 +447,7 @@ make tests/relativity/test_hamiltonian
 Temporarily remove the `0.5` factor from `dp` and require the time-dependent
 metric assertion to fail. Restore and rerun green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity/hamiltonian.h \
