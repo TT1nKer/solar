@@ -775,7 +775,7 @@ failure.
 ### Task 8: Kerr invariants and transparent diagnostics
 
 **Files:**
-- Modify: `tests/relativity/test_geodesics.cpp`
+- Create: `tests/relativity/test_geodesics_kerr.cpp`
 - Modify only for a demonstrated test failure:
   `src/relativity/geodesic_integrator.cpp`
 
@@ -783,7 +783,7 @@ failure.
 - Consumes: Kerr BL and explicit invariant-monitor flags.
 - Produces: E/Lz drift evidence and unavailable-Carter semantics.
 
-- [ ] **Step 1: Add an ordinary Kerr null state**
+- [x] **Step 1: Add an ordinary Kerr null state**
 
 At `M=1`, `chi=0.7`, `r=10`, `theta=1.2`, choose
 `p_t=-1`, `p_phi=2`, `p_theta=0`. Solve only `p_r` from the independent
@@ -809,13 +809,13 @@ max_carter_rel_error = NaN
 max_constraint_error < 1e-10
 ```
 
-- [ ] **Step 2: Add unmonitored invariant semantics**
+- [x] **Step 2: Add unmonitored invariant semantics**
 
 For a Minkowski integration with both flags false, require energy, Lz, and
 Carter diagnostic fields are all NaN. For a monitored exactly-zero Lz, require
 the recorded field uses absolute drift and remains zero.
 
-- [ ] **Step 3: Run and verify**
+- [x] **Step 3: Run and verify**
 
 ```bash
 make tests/relativity/test_geodesics
@@ -824,10 +824,10 @@ make tests/relativity/test_geodesics
 
 Expected: all invariant/NaN semantics and the ordinary Hamiltonian gate pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
-git add tests/relativity/test_geodesics.cpp \
+git add tests/relativity/test_geodesics_kerr.cpp \
   src/relativity/geodesic_integrator.cpp
 git commit -m "test: validate Kerr geodesic invariants"
 ```
