@@ -110,11 +110,22 @@ KerrBoyerLindquistMetric::KerrBoyerLindquistMetric(
         throw std::invalid_argument(
             "horizon margin fraction must be finite and positive");
     }
+    if (!std::isfinite(spin_a_M_) ||
+        !std::isfinite(horizon_margin_M_)) {
+        throw std::invalid_argument(
+            "Kerr derived length scales must remain finite");
+    }
 
-    const double horizon_offset =
-        std::sqrt(mass_M_ * mass_M_ - spin_a_M_ * spin_a_M_);
-    outer_horizon_M_ = mass_M_ + horizon_offset;
-    inner_horizon_M_ = mass_M_ - horizon_offset;
+    const double spin_squared = spin_chi_ * spin_chi_;
+    const double horizon_factor = std::sqrt(1.0 - spin_squared);
+    outer_horizon_M_ = mass_M_ * (1.0 + horizon_factor);
+    inner_horizon_M_ =
+        mass_M_ * spin_squared / (1.0 + horizon_factor);
+    if (!std::isfinite(outer_horizon_M_) ||
+        !std::isfinite(inner_horizon_M_)) {
+        throw std::invalid_argument(
+            "Kerr horizon radii must remain finite");
+    }
 }
 
 Mat4 KerrBoyerLindquistMetric::covariant(
@@ -257,9 +268,11 @@ double KerrBoyerLindquistMetric::outer_stationary_limit_radius(
             "stationary-limit theta must be finite");
     }
     const double cosine_theta = std::cos(theta);
-    return mass_M_ + std::sqrt(
-        mass_M_ * mass_M_ -
-        spin_a_M_ * spin_a_M_ * cosine_theta * cosine_theta);
+    return mass_M_ * (
+        1.0 + std::sqrt(
+            1.0 -
+            spin_chi_ * spin_chi_ *
+                cosine_theta * cosine_theta));
 }
 
 } // namespace solar::relativity

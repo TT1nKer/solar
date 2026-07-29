@@ -1,6 +1,7 @@
 #include "solar/relativity/kerr_bl_metric.h"
 #include "solar/relativity/schwarzschild_metric.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -21,6 +22,13 @@ void check(const char* name, bool condition) {
 void check_near(const char* name, double actual, double expected,
                 double tolerance) {
     check(name, std::fabs(actual - expected) <= tolerance);
+}
+
+void check_relative(const char* name, double actual, double expected,
+                    double tolerance) {
+    const double scale = std::max(std::fabs(expected), 1.0);
+    check(name, std::isfinite(actual) &&
+                    std::fabs(actual - expected) / scale <= tolerance);
 }
 
 double inverse_identity_error(const Mat4& covariant,
@@ -113,6 +121,29 @@ int main() {
                kerr.outer_stationary_limit_radius(0.0),
                kerr.outer_horizon_radius(), 1.0e-15);
 
+    const double large_mass = 1.0e200;
+    const KerrBoyerLindquistMetric large_kerr(large_mass, 0.5);
+    check_relative(
+        "large finite mass has stable outer horizon",
+        large_kerr.outer_horizon_radius(),
+        large_mass * (1.0 + std::sqrt(0.75)),
+        2.0e-15);
+    check_relative(
+        "large finite mass has stable inner horizon",
+        large_kerr.inner_horizon_radius(),
+        large_mass * (1.0 - std::sqrt(0.75)),
+        2.0e-15);
+    const double stationary_theta = 0.7;
+    check_relative(
+        "large finite mass has stable stationary limit",
+        large_kerr.outer_stationary_limit_radius(stationary_theta),
+        large_mass * (
+            1.0 + std::sqrt(
+                1.0 -
+                0.25 * std::cos(stationary_theta) *
+                    std::cos(stationary_theta))),
+        2.0e-15);
+
     const KerrBoyerLindquistMetric zero_spin(1.7, 0.0);
     const SchwarzschildBoyerLindquistMetric schwarzschild(1.7);
     for (const Contravariant4 point : {
@@ -150,6 +181,18 @@ int main() {
         check("extremal Kerr spin rejected", false);
     } catch (const std::invalid_argument&) {
         check("extremal Kerr spin rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(1.0e308, 0.0);
+        check("unrepresentable Kerr horizon rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("unrepresentable Kerr horizon rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(1.0e200, 0.5, 1.0e200);
+        check("unrepresentable Kerr margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("unrepresentable Kerr margin rejected", true);
     }
     try {
         (void)kerr.covariant(horizon);
