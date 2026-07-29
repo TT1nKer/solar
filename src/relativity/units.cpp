@@ -22,6 +22,13 @@ double require_finite(double value, const char* quantity) {
     return value;
 }
 
+double require_positive_finite_scale(double scale, const char* quantity) {
+    if (!std::isfinite(scale) || scale <= 0.0) {
+        throw std::invalid_argument(quantity);
+    }
+    return scale;
+}
+
 } // namespace
 
 GeometricUnits GeometricUnits::from_mass_kg(double input_mass_kg) {
@@ -46,19 +53,27 @@ GeometricUnits GeometricUnits::from_solar_masses(double solar_masses) {
 }
 
 double GeometricUnits::length_si_to_M(double metres) const {
-    return require_finite(metres, "metres must be finite") / M_length_m;
+    return require_finite(metres, "metres must be finite") /
+           require_positive_finite_scale(
+               M_length_m, "M_length_m must be finite and positive");
 }
 
 double GeometricUnits::length_M_to_si(double value_M) const {
-    return require_finite(value_M, "length in M must be finite") * M_length_m;
+    return require_finite(value_M, "length in M must be finite") *
+           require_positive_finite_scale(
+               M_length_m, "M_length_m must be finite and positive");
 }
 
 double GeometricUnits::time_si_to_M(double seconds) const {
-    return require_finite(seconds, "seconds must be finite") / M_time_s;
+    return require_finite(seconds, "seconds must be finite") /
+           require_positive_finite_scale(
+               M_time_s, "M_time_s must be finite and positive");
 }
 
 double GeometricUnits::time_M_to_si(double value_M) const {
-    return require_finite(value_M, "time in M must be finite") * M_time_s;
+    return require_finite(value_M, "time in M must be finite") *
+           require_positive_finite_scale(
+               M_time_s, "M_time_s must be finite and positive");
 }
 
 double GeometricUnits::velocity_si_to_c(double metres_per_second) const {

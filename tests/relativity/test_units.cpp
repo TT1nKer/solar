@@ -72,6 +72,12 @@ int main() {
         (void)units.length_si_to_M(
             std::numeric_limits<double>::quiet_NaN());
     });
+    check_invalid_argument("uninitialized length scale rejected", [] {
+        (void)GeometricUnits{}.length_si_to_M(1.0);
+    });
+    check_invalid_argument("uninitialized time scale rejected", [] {
+        (void)GeometricUnits{}.time_M_to_si(1.0);
+    });
 
     std::cout << "\n=== Results: " << passed << " passed, " << failed
               << " failed ===\n";
