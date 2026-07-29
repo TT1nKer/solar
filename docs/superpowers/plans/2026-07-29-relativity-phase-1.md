@@ -188,7 +188,7 @@ git commit -m "feat: add fixed-size DOPRI5 kernel"
 - Produces: `Dopri5DenseOutput<N>` and optional dense output in each completed
   step.
 
-- [ ] **Step 1: Add failing dense-output tests**
+- [x] **Step 1: Add failing dense-output tests**
 
 For `y'=y`, accepted step `h=0.2`, assert:
 
@@ -205,7 +205,7 @@ Require `evaluate(-1e-6)` and `evaluate(0.200001)` to throw
 `std::out_of_range`. Repeat with a negative step and require its endpoints and
 midpoint to use the decreasing independent-variable interval correctly.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_dopri5
@@ -214,7 +214,7 @@ make tests/relativity/test_dopri5
 Expected: compilation fails because `Dopri5DenseOutput`/`dense_output` is
 absent.
 
-- [ ] **Step 3: Implement the Dormand–Prince continuous extension**
+- [x] **Step 3: Implement the Dormand–Prince continuous extension**
 
 Store `t0`, `h`, `y0`, and four coefficient vectors `q1..q4`. Form them from
 the stage derivatives and the Shampine matrix:
@@ -254,7 +254,7 @@ y(t) = y0 + h * (
 Allow only the closed interval between `t0` and `t0+h`, independent of step
 sign. Construct dense output only when every stage and trial value is finite.
 
-- [ ] **Step 4: Verify GREEN and run a mutation**
+- [x] **Step 4: Verify GREEN and run a mutation**
 
 ```bash
 make tests/relativity/test_dopri5
@@ -265,7 +265,7 @@ Temporarily negate one nonzero continuous-extension coefficient and rerun.
 Expected: the midpoint assertion fails. Restore the coefficient and rerun to
 green before committing.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/numerics/dopri5.h \

@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -32,6 +33,78 @@ struct Dopri5Config {
 };
 
 template <std::size_t N>
+struct Dopri5StepResult;
+
+template <std::size_t N, typename Rhs>
+Dopri5StepResult<N> dopri5_step(
+    const StateN<N>& state,
+    double independent_variable,
+    double step,
+    const Rhs& rhs,
+    const Dopri5Config<N>& config);
+
+template <std::size_t N>
+class Dopri5DenseOutput {
+public:
+    double start() const noexcept {
+        return start_;
+    }
+
+    double end() const noexcept {
+        return start_ + step_;
+    }
+
+    StateN<N> evaluate(double independent_variable) const {
+        const double interval_end = end();
+        const double lower = std::min(start_, interval_end);
+        const double upper = std::max(start_, interval_end);
+        if (!std::isfinite(independent_variable) ||
+            independent_variable < lower ||
+            independent_variable > upper) {
+            throw std::out_of_range(
+                "DOPRI5 dense output cannot extrapolate");
+        }
+
+        const double theta =
+            (independent_variable - start_) / step_;
+        StateN<N> interpolated = initial_state_;
+        for (std::size_t i = 0; i < N; ++i) {
+            interpolated[i] +=
+                step_ * theta *
+                (coefficients_[0][i] +
+                 theta * (coefficients_[1][i] +
+                          theta * (coefficients_[2][i] +
+                                   theta * coefficients_[3][i])));
+        }
+        return interpolated;
+    }
+
+private:
+    Dopri5DenseOutput(
+        double start,
+        double step,
+        const StateN<N>& initial_state,
+        const std::array<StateN<N>, 4>& coefficients)
+        : start_(start),
+          step_(step),
+          initial_state_(initial_state),
+          coefficients_(coefficients) {}
+
+    template <std::size_t M, typename Rhs>
+    friend Dopri5StepResult<M> dopri5_step(
+        const StateN<M>& state,
+        double independent_variable,
+        double step,
+        const Rhs& rhs,
+        const Dopri5Config<M>& config);
+
+    double start_;
+    double step_;
+    StateN<N> initial_state_;
+    std::array<StateN<N>, 4> coefficients_;
+};
+
+template <std::size_t N>
 struct Dopri5StepResult {
     enum class Status {
         Completed,
@@ -45,6 +118,7 @@ struct Dopri5StepResult {
     double next_step;
     double error;
     bool accepted;
+    std::optional<Dopri5DenseOutput<N>> dense_output;
 };
 
 namespace detail {
@@ -63,6 +137,7 @@ struct Dopri5CoreResult {
     double next_step;
     double error;
     bool accepted;
+    std::array<State, 7> stages;
 };
 
 template <typename State>
@@ -103,6 +178,7 @@ Dopri5CoreResult<State> failed_core_step(
         step,
         std::numeric_limits<double>::infinity(),
         false,
+        {},
     };
 }
 
@@ -298,6 +374,7 @@ Dopri5CoreResult<State> dopri5_step_impl(
         std::copysign(std::fabs(step) * factor, step),
         error,
         accepted,
+        {{k1, k2, k3, k4, k5, k6, k7}},
     };
 }
 
@@ -368,6 +445,49 @@ Dopri5StepResult<N> dopri5_step(
         status = Status::NonFiniteDerivative;
     }
 
+    std::optional<Dopri5DenseOutput<N>> dense_output;
+    if (status == Status::Completed) {
+        constexpr double extension[7][4] = {
+            {1.0,
+             -8048581381.0 / 2820520608.0,
+             8663915743.0 / 2820520608.0,
+             -12715105075.0 / 11282082432.0},
+            {0.0, 0.0, 0.0, 0.0},
+            {0.0,
+             131558114200.0 / 32700410799.0,
+             -68118460800.0 / 10900136933.0,
+             87487479700.0 / 32700410799.0},
+            {0.0,
+             -1754552775.0 / 470086768.0,
+             14199869525.0 / 1410260304.0,
+             -10690763975.0 / 1880347072.0},
+            {0.0,
+             127303824393.0 / 49829197408.0,
+             -318862633887.0 / 49829197408.0,
+             701980252875.0 / 199316789632.0},
+            {0.0,
+             -282668133.0 / 205662961.0,
+             2019193451.0 / 616988883.0,
+             -1453857185.0 / 822651844.0},
+            {0.0,
+             40617522.0 / 29380423.0,
+             -110615467.0 / 29380423.0,
+             69997945.0 / 29380423.0},
+        };
+        std::array<StateN<N>, 4> coefficients{};
+        for (std::size_t component = 0; component < N; ++component) {
+            for (std::size_t power = 0; power < 4; ++power) {
+                for (std::size_t stage = 0; stage < 7; ++stage) {
+                    coefficients[power][component] +=
+                        core.stages[stage][component] *
+                        extension[stage][power];
+                }
+            }
+        }
+        dense_output = Dopri5DenseOutput<N>(
+            independent_variable, step, state, coefficients);
+    }
+
     return Dopri5StepResult<N>{
         status,
         core.state,
@@ -375,6 +495,7 @@ Dopri5StepResult<N> dopri5_step(
         core.next_step,
         core.error,
         core.accepted,
+        std::move(dense_output),
     };
 }
 

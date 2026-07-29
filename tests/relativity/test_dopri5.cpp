@@ -37,6 +37,16 @@ void check_invalid_argument(const char* name, Action action) {
     }
 }
 
+template <typename Action>
+void check_out_of_range(const char* name, Action action) {
+    try {
+        action();
+        check(name, false);
+    } catch (const std::out_of_range&) {
+        check(name, true);
+    }
+}
+
 Dopri5Config<1> reference_config() {
     return Dopri5Config<1>{
         StateN<1>{{1.0e-12}},
@@ -179,6 +189,54 @@ int main() {
               StepStatus::NonFiniteDerivative);
     check("RHS never receives non-finite stage time",
           !received_non_finite_time);
+
+    Dopri5Config<1> dense_config = config;
+    dense_config.absolute_tolerance[0] = 1.0e-9;
+    dense_config.relative_tolerance = 1.0e-6;
+    const auto dense_step = solar::numerics::dopri5_step(
+        initial, 0.0, 0.2, exponential_rhs, dense_config);
+    check("dense-output step accepted", dense_step.accepted);
+    check("dense output is available",
+          dense_step.dense_output.has_value());
+    const auto dense = dense_step.dense_output.value();
+    check_near("dense start", dense.evaluate(0.0)[0],
+               1.0, 0.0);
+    check_near("dense midpoint", dense.evaluate(0.1)[0],
+               std::exp(0.1), 2.0e-7);
+    check_near("dense end", dense.evaluate(0.2)[0],
+               dense_step.state[0], 2.0e-15);
+    check_out_of_range("dense rejects value before interval", [&] {
+        (void)dense.evaluate(-1.0e-6);
+    });
+    check_out_of_range("dense rejects value after interval", [&] {
+        (void)dense.evaluate(0.200001);
+    });
+
+    const auto backward_dense_step =
+        solar::numerics::dopri5_step(
+            initial, 0.0, -0.2, exponential_rhs, dense_config);
+    check("backward dense-output step accepted",
+          backward_dense_step.accepted);
+    check("backward dense output is available",
+          backward_dense_step.dense_output.has_value());
+    const auto backward_dense =
+        backward_dense_step.dense_output.value();
+    check_near("backward dense start",
+               backward_dense.evaluate(0.0)[0], 1.0, 0.0);
+    check_near("backward dense midpoint",
+               backward_dense.evaluate(-0.1)[0],
+               std::exp(-0.1), 2.0e-7);
+    check_near("backward dense end",
+               backward_dense.evaluate(-0.2)[0],
+               backward_dense_step.state[0], 2.0e-15);
+    check_out_of_range(
+        "backward dense rejects value above interval", [&] {
+            (void)backward_dense.evaluate(1.0e-6);
+        });
+    check_out_of_range(
+        "backward dense rejects value below interval", [&] {
+            (void)backward_dense.evaluate(-0.200001);
+        });
 
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";
