@@ -181,6 +181,26 @@ int main() {
         check("non-positive Schwarzschild mass rejected", true);
     }
     try {
+        (void)SchwarzschildBoyerLindquistMetric(
+            std::numeric_limits<double>::quiet_NaN());
+        check("non-finite Schwarzschild mass rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-finite Schwarzschild mass rejected", true);
+    }
+    try {
+        (void)SchwarzschildBoyerLindquistMetric(
+            std::numeric_limits<double>::denorm_min());
+        check("underflowing Schwarzschild margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("underflowing Schwarzschild margin rejected", true);
+    }
+    try {
+        (void)SchwarzschildBoyerLindquistMetric(1.0, 0.0);
+        check("non-positive Schwarzschild margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-positive Schwarzschild margin rejected", true);
+    }
+    try {
         (void)SchwarzschildBoyerLindquistMetric(1.0e308);
         check("unrepresentable Schwarzschild horizon rejected", false);
     } catch (const std::invalid_argument&) {

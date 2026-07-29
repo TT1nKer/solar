@@ -156,6 +156,13 @@ int main() {
     check_near("Kerr polar stationary limit",
                kerr.outer_stationary_limit_radius(0.0),
                kerr.outer_horizon_radius(), 1.0e-15);
+    try {
+        (void)kerr.outer_stationary_limit_radius(
+            std::numeric_limits<double>::quiet_NaN());
+        check("non-finite stationary-limit angle rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-finite stationary-limit angle rejected", true);
+    }
 
     const double large_mass = 1.0e200;
     const KerrBoyerLindquistMetric large_kerr(large_mass, 0.5);
@@ -215,6 +222,33 @@ int main() {
         check("non-positive Kerr mass rejected", false);
     } catch (const std::invalid_argument&) {
         check("non-positive Kerr mass rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(
+            std::numeric_limits<double>::quiet_NaN(), 0.5);
+        check("non-finite Kerr mass rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-finite Kerr mass rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(
+            1.0, std::numeric_limits<double>::quiet_NaN());
+        check("non-finite Kerr spin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-finite Kerr spin rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(1.0, 0.5, 0.0);
+        check("non-positive Kerr margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("non-positive Kerr margin rejected", true);
+    }
+    try {
+        (void)KerrBoyerLindquistMetric(
+            std::numeric_limits<double>::denorm_min(), 0.5);
+        check("underflowing Kerr margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("underflowing Kerr margin rejected", true);
     }
     try {
         (void)KerrBoyerLindquistMetric(1.0, 1.0);
