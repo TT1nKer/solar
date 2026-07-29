@@ -470,7 +470,7 @@ git commit -m "feat: add Hamiltonian geodesic RHS"
 - Produces: exact v3 event/termination/diagnostic types and
   `locate_event`.
 
-- [ ] **Step 1: Write event-direction and endpoint tests**
+- [x] **Step 1: Write event-direction and endpoint tests**
 
 Build exact dense output from an accepted constant RHS step:
 
@@ -496,7 +496,7 @@ For event `x^1-0.3`, require:
 Use a function that returns NaN only at internal trial points to require
 `EventRootStatus::Failed`, distinct from `NoRoot`.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_geodesic_events
@@ -504,14 +504,14 @@ make tests/relativity/test_geodesic_events
 
 Expected: missing geodesic/event headers.
 
-- [ ] **Step 3: Implement L0 types**
+- [x] **Step 3: Implement L0 types**
 
 Copy every `TerminationReason` field and every diagnostics field from v3.
 Initialize unavailable invariant/min-step fields with quiet NaN. Define
 `GeodesicEvent`, `EventHit`, `EventRootStatus`, and `EventRootResult` exactly as
 the design.
 
-- [ ] **Step 4: Implement safeguarded secant/bisection**
+- [x] **Step 4: Implement safeguarded secant/bisection**
 
 Represent the bracket by dense fraction `theta in [0,1]`. At each iteration:
 
@@ -532,7 +532,7 @@ std::fabs(dense.end() - dense.start()) *
 Use at most 100 iterations. Return `Failed` on non-finite values or exhausted
 iterations. Do not use a derivative/Newton update.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 ```bash
 make tests/relativity/test_geodesic_events
@@ -542,7 +542,7 @@ make tests/relativity/test_geodesic_events
 Expected: all direction, endpoint, negative-step, and failure distinctions
 pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity/geodesic_types.h \

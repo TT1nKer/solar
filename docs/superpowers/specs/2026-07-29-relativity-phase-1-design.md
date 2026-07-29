@@ -105,6 +105,7 @@ enum class EventDirection {
 
 enum class TerminationReason {
     HorizonCrossing,
+    InteriorCutoff,
     Escaped,
     DiskSurfaceHit,
     MaterialSurfaceHit,
