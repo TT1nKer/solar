@@ -132,7 +132,7 @@ Exercise one-solar-mass references:
 ```cpp
 const auto units = GeometricUnits::from_solar_masses(1.0);
 check_near("solar M length", units.M_length_m, 1476.669691, 1e-6);
-check_near("solar M time", units.M_time_s, 4.925491e-6, 1e-12);
+check_near("solar M time", units.M_time_s, 4.925639893961039e-6, 1e-18);
 check_near("length round trip",
            units.length_M_to_si(units.length_si_to_M(12345.0)),
            12345.0, 1e-10);

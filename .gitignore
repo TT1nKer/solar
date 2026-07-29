@@ -3,6 +3,7 @@
 *.a
 *.so
 *.dylib
+*.d
 build/
 
 # main binary
@@ -15,6 +16,8 @@ tests/test_kepler
 tests/test_montecarlo
 tests/test_network
 tests/test_validation
+tests/relativity/test_*
+!tests/relativity/*.cpp
 
 # JPL DE440 ephemeris data (download separately per README; ~59MB)
 data/
