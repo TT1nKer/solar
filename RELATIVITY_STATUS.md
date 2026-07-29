@@ -1,7 +1,7 @@
 # Solar Relativity Status
 
-CURRENT_PHASE: 0A
-PHASE_STATE: PASSED
+CURRENT_PHASE: 0B
+PHASE_STATE: IN_PROGRESS
 LAST_VERIFIED_COMMIT: 210450b1db3a9903a608db74a67c75c6b847b28b
 LAST_VERIFIED_PLATFORM: macOS 14.8.7 arm64 / Apple Clang 16.0.0
 LAST_VERIFIED_COMMANDS:
@@ -37,7 +37,7 @@ NOT_COMPLETED:
 - DE440's eight external-data assertions on this machine.
 
 CURRENT_BLOCKERS:
-- None. Phase 0B still requires an explicit continue instruction.
+- None.
 
 MOST_LIKELY_BUGS:
 - The fixed `1.98847e30 kg` solar-mass convention may differ from a downstream caller that expects the IAU nominal solar mass parameter.
@@ -55,4 +55,4 @@ FASTEST_WAY_TO_FALSIFY:
 - Run `./tests/test_de /tmp/solar-definitely-missing-de440.asc`; any zero exit is wrong.
 
 NEXT_ALLOWED_ACTION:
-- Phase 0B only: metric interface plus independently validated Minkowski, Schwarzschild, and Kerr Boyer-Lindquist metrics. Stop until explicitly instructed.
+- Implement and validate Phase 0B metric interfaces, Minkowski, Schwarzschild, Kerr Boyer-Lindquist, and metric CLI. Do not enter Phase 1.
