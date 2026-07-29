@@ -40,6 +40,7 @@ initialization remains in Phase 2.
 
 **Files:**
 - Create: `include/solar/numerics/dopri5.h`
+- Create: `include/solar/numerics/detail/dopri5_core.h`
 - Create: `tests/relativity/test_dopri5.cpp`
 
 **Interfaces:**
@@ -181,6 +182,7 @@ git commit -m "feat: add fixed-size DOPRI5 kernel"
 
 **Files:**
 - Modify: `include/solar/numerics/dopri5.h`
+- Create: `include/solar/numerics/detail/dopri5_dense.h`
 - Modify: `tests/relativity/test_dopri5.cpp`
 
 **Interfaces:**
@@ -558,6 +560,8 @@ git commit -m "feat: add directed geodesic events"
 - Create: `include/solar/relativity/geodesic_integrator.h`
 - Create: `src/relativity/geodesic_config.cpp`
 - Create: `src/relativity/geodesic_config_internal.h`
+- Create: `src/relativity/geodesic_event_selection.cpp`
+- Create: `src/relativity/geodesic_event_selection.h`
 - Create: `src/relativity/geodesic_step_attempt.cpp`
 - Create: `src/relativity/geodesic_step_attempt.h`
 - Create: `src/relativity/geodesic_integrator.cpp`

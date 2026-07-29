@@ -75,6 +75,13 @@ void validate_geodesic_config(
         throw std::invalid_argument(
             "geodesic DOPRI5 controller configuration is invalid");
     }
+    if (config.dopri5.error_norm !=
+            numerics::ErrorNorm::RootMeanSquare &&
+        config.dopri5.error_norm !=
+            numerics::ErrorNorm::Maximum) {
+        throw std::invalid_argument(
+            "geodesic DOPRI5 error norm is not recognized");
+    }
 }
 
 } // namespace detail

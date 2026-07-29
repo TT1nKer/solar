@@ -75,6 +75,10 @@ double hamiltonian_constraint_error(
     }
     const double denominator =
         1.0 + std::fabs(target) + 0.5 * absolute_scale_sum;
+    if (!std::isfinite(denominator) || denominator <= 0.0) {
+        throw std::domain_error(
+            "Hamiltonian constraint scale is non-finite");
+    }
     const double error = std::fabs(value - target) / denominator;
     if (!std::isfinite(error)) {
         throw std::domain_error(

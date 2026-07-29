@@ -103,6 +103,25 @@ int main() {
           domain_result.diagnostics.reason !=
               TerminationReason::HorizonCrossing);
 
+    const GeodesicEvent initial_event{
+        "initial boundary",
+        [](const PhaseSpaceState& state) {
+            return state.x.v[1];
+        },
+        EventDirection::Any,
+        TerminationReason::UserEvent,
+        1.0e-12,
+    };
+    const auto initial_event_result = integrator.integrate(
+        photon(), config(), {initial_event});
+    check("initial any-direction event terminates immediately",
+          initial_event_result.diagnostics.reason ==
+              TerminationReason::UserEvent);
+    check("initial event performs no rejected trial",
+          initial_event_result.diagnostics.rejected_steps == 0);
+    check("initial event performs no accepted trial",
+          initial_event_result.diagnostics.accepted_steps == 0);
+
     GeodesicEvent non_finite_event{
         "non-finite internal event",
         [](const PhaseSpaceState& state) {

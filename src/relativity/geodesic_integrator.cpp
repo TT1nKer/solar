@@ -1,11 +1,11 @@
 #include "solar/relativity/geodesic_integrator.h"
 
 #include "geodesic_config_internal.h"
+#include "geodesic_event_selection.h"
 #include "geodesic_step_attempt.h"
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <string>
 
 namespace solar::relativity {
@@ -147,6 +147,24 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
         });
     }
 
+    const detail::GeodesicEventSelection initial_event =
+        detail::select_initial_any_event(initial, active_events);
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Failed) {
+        return terminate(
+            initial,
+            TerminationReason::EventRootFailure,
+            initial_event.message);
+    }
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Found) {
+        return terminate(
+            initial,
+            initial_event.reason,
+            initial_event.message,
+            initial_event.hit);
+    }
+
     PhaseSpaceState current = initial;
     double proposed_step = config.initial_step;
     const double direction =
@@ -248,41 +266,21 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
                 "accepted DOPRI5 step has no dense output");
         }
 
-        std::optional<EventHit> selected_event;
-        TerminationReason selected_reason =
-            TerminationReason::UserEvent;
-        double selected_fraction =
-            std::numeric_limits<double>::infinity();
-        for (std::size_t index = 0;
-             index < active_events.size();
-             ++index) {
-            const EventRootResult root = locate_event(
-                index, active_events[index],
-                *step.dense_output);
-            if (root.status == EventRootStatus::Failed) {
-                return terminate(
-                    current,
-                    TerminationReason::EventRootFailure,
-                    root.message);
-            }
-            if (root.status != EventRootStatus::Found) {
-                continue;
-            }
-            const double fraction =
-                (root.hit->affine - current.affine) /
-                attempted_step;
-            if (fraction < selected_fraction) {
-                selected_fraction = fraction;
-                selected_event = root.hit;
-                selected_reason =
-                    active_events[index].reason;
-            }
+        const detail::GeodesicEventSelection selected_event =
+            detail::select_first_step_event(
+                *step.dense_output, active_events);
+        if (selected_event.status ==
+            detail::GeodesicEventSelectionStatus::Failed) {
+            return terminate(
+                current,
+                TerminationReason::EventRootFailure,
+                selected_event.message);
         }
 
         PhaseSpaceState accepted_state;
         double accepted_step_magnitude;
-        if (selected_event.has_value()) {
-            accepted_state = selected_event->state;
+        if (selected_event.hit.has_value()) {
+            accepted_state = selected_event.hit->state;
             accepted_step_magnitude = std::fabs(
                 accepted_state.affine - current.affine);
         } else {
@@ -293,13 +291,13 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
                 std::fabs(attempted_step);
         }
 
-        if (selected_event.has_value() &&
+        if (selected_event.hit.has_value() &&
             accepted_step_magnitude == 0.0) {
             return terminate(
                 accepted_state,
-                selected_reason,
+                selected_event.reason,
                 "geodesic event is at the current state",
-                selected_event);
+                selected_event.hit);
         }
 
         if (!finite_phase_space(accepted_state)) {
@@ -365,12 +363,12 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
                 TerminationReason::ConstraintViolation,
                 "accepted Hamiltonian constraint exceeds tolerance");
         }
-        if (selected_event.has_value()) {
+        if (selected_event.hit.has_value()) {
             return terminate(
                 current,
-                selected_reason,
-                "geodesic event reached",
-                selected_event);
+                selected_event.reason,
+                selected_event.message,
+                selected_event.hit);
         }
 
         consecutive_rejections = 0;

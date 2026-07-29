@@ -284,6 +284,13 @@ int main() {
         (void)integrator.integrate(photon, null_proper_limit);
     });
 
+    auto unknown_norm = null_config(0.1, 1.0, 1.0);
+    unknown_norm.dopri5.error_norm =
+        static_cast<solar::numerics::ErrorNorm>(99);
+    check_invalid_argument("unknown geodesic error norm rejected", [&] {
+        (void)integrator.integrate(photon, unknown_norm);
+    });
+
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

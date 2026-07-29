@@ -149,6 +149,13 @@ int main() {
             initial, 0.0, 0.1, exponential_rhs, invalid_config);
     });
 
+    invalid_config = config;
+    invalid_config.error_norm = static_cast<ErrorNorm>(99);
+    check_invalid_argument("unknown error norm rejected", [&] {
+        (void)solar::numerics::dopri5_step(
+            initial, 0.0, 0.1, exponential_rhs, invalid_config);
+    });
+
     StateN<1> non_finite_state{
         {std::numeric_limits<double>::quiet_NaN()}};
     const auto invalid_state = solar::numerics::dopri5_step(
@@ -237,6 +244,70 @@ int main() {
         "backward dense rejects value below interval", [&] {
             (void)backward_dense.evaluate(-0.200001);
         });
+
+    Dopri5Config<2> rms_config{
+        StateN<2>{{1.0e-12, 1.0e-12}},
+        1.0e-11,
+        0.9,
+        0.2,
+        5.0,
+        ErrorNorm::RootMeanSquare,
+    };
+    const StateN<2> one_active_component{{1.0, 0.0}};
+    const auto one_component_rhs =
+        [](double, const StateN<2>& state) {
+            return StateN<2>{{state[0], 0.0}};
+        };
+    const auto rms_step = solar::numerics::dopri5_step(
+        one_active_component, 0.0, 0.1,
+        one_component_rhs, rms_config);
+    Dopri5Config<2> maximum_config = rms_config;
+    maximum_config.error_norm = ErrorNorm::Maximum;
+    const auto maximum_step = solar::numerics::dopri5_step(
+        one_active_component, 0.0, 0.1,
+        one_component_rhs, maximum_config);
+    check_near("RMS divides one active error by sqrt(N)",
+               maximum_step.error / rms_step.error,
+               std::sqrt(2.0), 2.0e-13);
+
+    const StateN<2> second_component_active{{0.0, 1.0}};
+    const auto second_component_rhs =
+        [](double, const StateN<2>& state) {
+            return StateN<2>{{0.0, state[1]}};
+        };
+    Dopri5Config<2> component_config = rms_config;
+    component_config.absolute_tolerance =
+        StateN<2>{{1.0e-12, 1.0e-3}};
+    const auto loose_second_component =
+        solar::numerics::dopri5_step(
+            second_component_active, 0.0, 0.1,
+            second_component_rhs, component_config);
+    check("component-specific loose tolerance accepts",
+          loose_second_component.accepted);
+    component_config.absolute_tolerance[1] = 1.0e-12;
+    const auto tight_second_component =
+        solar::numerics::dopri5_step(
+            second_component_active, 0.0, 0.1,
+            second_component_rhs, component_config);
+    check("tightening only active component rejects",
+          !tight_second_component.accepted);
+    check("active component tolerance changes error materially",
+          tight_second_component.error >
+              1.0e6 * loose_second_component.error);
+
+    Dopri5Config<1> extreme_scale_config = config;
+    extreme_scale_config.absolute_tolerance[0] = 1.0e-200;
+    extreme_scale_config.relative_tolerance = 1.0e-200;
+    const auto extreme_scale_step =
+        solar::numerics::dopri5_step(
+            initial, 0.0, 0.1,
+            exponential_rhs, extreme_scale_config);
+    check("large finite RMS error remains completed",
+          extreme_scale_step.status == StepStatus::Completed);
+    check("large finite RMS error remains finite",
+          std::isfinite(extreme_scale_step.error));
+    check("large finite RMS error rejects the step",
+          !extreme_scale_step.accepted);
 
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";

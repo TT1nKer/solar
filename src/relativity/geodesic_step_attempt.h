@@ -1,6 +1,7 @@
 #pragma once
 
-#include "solar/relativity/geodesic_integrator.h"
+#include "solar/numerics/dopri5.h"
+#include "solar/relativity/hamiltonian.h"
 
 namespace solar::relativity::detail {
 

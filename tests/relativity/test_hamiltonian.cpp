@@ -181,6 +181,15 @@ int main() {
     check_domain_error("non-finite momentum rejected", [&] {
         (void)HamiltonGeodesicRhs(minkowski)(invalid);
     });
+    PhaseSpaceState overflowing_constraint = photon;
+    overflowing_constraint.p.v =
+        Vec4{{-1.0e154, 1.0e154, 0.0, 0.0}};
+    check_domain_error("overflowing constraint scale rejected", [&] {
+        (void)hamiltonian_constraint_error(
+            minkowski,
+            overflowing_constraint,
+            GeodesicKind::Null);
+    });
 
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";

@@ -140,6 +140,28 @@ int main() {
     check("failed root has no hit",
           !failed_root.hit.has_value());
 
+    GeodesicEvent unresolvable_root{
+        "unresolvable tolerance",
+        [](const PhaseSpaceState& state) {
+            const double difference = state.x.v[1] - 0.3;
+            if (std::fabs(difference) < 1.0e-14) {
+                return std::copysign(
+                    std::numeric_limits<double>::denorm_min(),
+                    difference == 0.0 ? 1.0 : difference);
+            }
+            return difference;
+        },
+        EventDirection::Any,
+        TerminationReason::UserEvent,
+        std::numeric_limits<double>::denorm_min(),
+    };
+    const auto exhausted_root = locate_event(
+        7, unresolvable_root, dense);
+    check("unresolvable root tolerance fails explicitly",
+          exhausted_root.status == EventRootStatus::Failed);
+    check("exhausted root has no hit",
+          !exhausted_root.hit.has_value());
+
     const IntegrationDiagnostics diagnostics{};
     check("diagnostic min step starts unavailable",
           std::isnan(diagnostics.min_step));
