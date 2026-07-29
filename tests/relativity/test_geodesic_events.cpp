@@ -1,6 +1,7 @@
 #include "solar/relativity/event_root.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 
@@ -177,6 +178,12 @@ int main() {
           TerminationReason::InteriorCutoff !=
               TerminationReason::HorizonCrossing);
 
+    std::cout << std::setprecision(17)
+              << "  linear_event_affine_error="
+              << std::fabs(increasing.hit->affine - 0.3)
+              << " negative_step_event_affine_error="
+              << std::fabs(backward.hit->affine + 0.7)
+              << '\n';
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

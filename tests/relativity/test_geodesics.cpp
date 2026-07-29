@@ -2,7 +2,9 @@
 #include "solar/relativity/minkowski_metric.h"
 #include "solar/relativity/schwarzschild_metric.h"
 
+#include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -126,6 +128,8 @@ int main() {
               TerminationReason::MaxAffine);
     check_near("forward-backward affine",
                backward.final_state.affine, photon.affine, 2.0e-12);
+    double reversibility_error =
+        std::fabs(backward.final_state.affine - photon.affine);
     for (std::size_t component = 0; component < 4; ++component) {
         check_near("forward-backward coordinate",
                    backward.final_state.x.v[component],
@@ -133,6 +137,16 @@ int main() {
         check_near("forward-backward momentum",
                    backward.final_state.p.v[component],
                    photon.p.v[component], 2.0e-12);
+        reversibility_error = std::max(
+            reversibility_error,
+            std::fabs(
+                backward.final_state.x.v[component] -
+                photon.x.v[component]));
+        reversibility_error = std::max(
+            reversibility_error,
+            std::fabs(
+                backward.final_state.p.v[component] -
+                photon.p.v[component]));
     }
 
     const GeodesicEvent user_event{
@@ -291,6 +305,11 @@ int main() {
         (void)integrator.integrate(photon, unknown_norm);
     });
 
+    std::cout << std::setprecision(17)
+              << "  minkowski_null_max_constraint="
+              << null_line.diagnostics.max_constraint_error
+              << " reversibility_max_error="
+              << reversibility_error << '\n';
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

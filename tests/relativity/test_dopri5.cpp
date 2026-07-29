@@ -1,6 +1,7 @@
 #include "solar/numerics/dopri5.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -56,6 +57,25 @@ Dopri5Config<1> reference_config() {
         5.0,
         ErrorNorm::RootMeanSquare,
     };
+}
+
+double fixed_step_exponential_error(double step_size) {
+    Dopri5Config<1> config = reference_config();
+    config.absolute_tolerance[0] = 1.0e-6;
+    config.relative_tolerance = 1.0e-6;
+    StateN<1> state{{1.0}};
+    double time = 0.0;
+    const auto rhs =
+        [](double, const StateN<1>& value) { return value; };
+    const std::size_t step_count =
+        static_cast<std::size_t>(std::llround(1.0 / step_size));
+    for (std::size_t index = 0; index < step_count; ++index) {
+        const auto step = solar::numerics::dopri5_step(
+            state, time, step_size, rhs, config);
+        state = step.state;
+        time += step_size;
+    }
+    return std::fabs(state[0] - std::exp(1.0));
 }
 
 } // namespace
@@ -309,6 +329,30 @@ int main() {
     check("large finite RMS error rejects the step",
           !extreme_scale_step.accepted);
 
+    const double coarse_error =
+        fixed_step_exponential_error(0.2);
+    const double medium_error =
+        fixed_step_exponential_error(0.1);
+    const double fine_error =
+        fixed_step_exponential_error(0.05);
+    const double coarse_order =
+        std::log2(coarse_error / medium_error);
+    const double fine_order =
+        std::log2(medium_error / fine_error);
+    check("DOPRI5 coarse observed order is five",
+          coarse_order > 4.7 && coarse_order < 5.3);
+    check("DOPRI5 fine observed order is five",
+          fine_order > 4.7 && fine_order < 5.3);
+
+    std::cout << std::setprecision(17)
+              << "  dopri_error_estimate=" << step.error
+              << " dense_midpoint_abs_error="
+              << std::fabs(
+                     dense.evaluate(0.1)[0] - std::exp(0.1))
+              << " fixed_errors=" << coarse_error << ','
+              << medium_error << ',' << fine_error
+              << " observed_orders=" << coarse_order << ','
+              << fine_order << '\n';
     std::cout << "\n=== Results: " << passed << " passed, "
               << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;
