@@ -51,6 +51,12 @@ int main() {
     check_near("quotient dx", quotient.derivative[0], 1.0 / 3.0);
     check_near("quotient dy", quotient.derivative[1], -2.0 / 9.0);
 
+    const Dual4 tiny_quotient = x / Dual4{1.0e-300};
+    check("tiny finite denominator keeps quotient finite",
+          tiny_quotient.all_finite());
+    check_near("tiny denominator derivative",
+               tiny_quotient.derivative[0], 1.0e300, 1.0e286);
+
     const Dual4 positive = Dual4::variable(4.0, 2);
     const Dual4 chain = log(sqrt(positive));
     check_near("sqrt-log value", chain.value, std::log(2.0));

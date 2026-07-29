@@ -88,14 +88,16 @@ inline Dual4 operator/(const Dual4& numerator, const Dual4& denominator) {
         throw std::domain_error(
             "Dual4 denominator value must be finite and nonzero");
     }
-    const double denominator_squared =
-        denominator.value * denominator.value;
     Dual4 result{numerator.value / denominator.value};
     for (std::size_t index = 0; index < 4; ++index) {
         result.derivative[index] =
-            (numerator.derivative[index] * denominator.value -
-             numerator.value * denominator.derivative[index]) /
-            denominator_squared;
+            (numerator.derivative[index] -
+             result.value * denominator.derivative[index]) /
+            denominator.value;
+    }
+    if (!result.all_finite()) {
+        throw std::domain_error(
+            "Dual4 quotient produced a non-finite value or derivative");
     }
     return result;
 }
