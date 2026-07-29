@@ -678,7 +678,7 @@ git commit -m "feat: integrate Hamiltonian geodesics"
 ### Task 7: Schwarzschild analytic validation
 
 **Files:**
-- Modify: `tests/relativity/test_geodesics.cpp`
+- Create: `tests/relativity/test_geodesics_schwarzschild.cpp`
 - Modify only for a demonstrated test failure:
   `src/relativity/geodesic_integrator.cpp`
 - Modify only for a demonstrated test failure:
@@ -688,7 +688,7 @@ git commit -m "feat: integrate Hamiltonian geodesics"
 - Consumes: the completed general flow.
 - Produces: independent radial-null, weak-bending, and photon-sphere evidence.
 
-- [ ] **Step 1: Add outgoing radial-null analytic test**
+- [x] **Step 1: Add outgoing radial-null analytic test**
 
 At `M=1`, `r0=10`, equator, use:
 
@@ -707,7 +707,7 @@ t = 2 + 2*log((12-2)/(10-2))
 
 within `2e-10`, and maximum normalized Hamiltonian error below `1e-10`.
 
-- [ ] **Step 2: Add photon-sphere RHS test**
+- [x] **Step 2: Add photon-sphere RHS test**
 
 At equatorial `r=3M` with:
 
@@ -720,7 +720,7 @@ p_phi=3*sqrt(3)*M
 
 Require `H`, `dr/dlambda`, and `dp_r/dlambda` below `2e-14`.
 
-- [ ] **Step 3: Add weak-field deflection test**
+- [x] **Step 3: Add weak-field deflection test**
 
 At `M=1`, impact parameter `b=100`, start/end radius `R=10000`, equator:
 
@@ -750,7 +750,7 @@ abs(phi_final-phi_initial) -
 Require it within 5% of `4M/b`, an ordinary-ray Hamiltonian error below
 `1e-10`, and explicit `Escaped` termination.
 
-- [ ] **Step 4: Run and correct only demonstrated failures**
+- [x] **Step 4: Run and correct only demonstrated failures**
 
 ```bash
 make tests/relativity/test_geodesics
@@ -760,10 +760,10 @@ make tests/relativity/test_geodesics
 If a threshold fails, inspect convergence under halved `max_step` before
 changing production. Do not loosen the v3 Hamiltonian gate.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add tests/relativity/test_geodesics.cpp \
+git add tests/relativity/test_geodesics_schwarzschild.cpp \
   src/relativity/geodesic_integrator.cpp \
   include/solar/numerics/dopri5.h
 git commit -m "test: validate Schwarzschild geodesics"
