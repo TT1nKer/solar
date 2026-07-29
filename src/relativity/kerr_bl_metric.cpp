@@ -111,9 +111,10 @@ KerrBoyerLindquistMetric::KerrBoyerLindquistMetric(
             "horizon margin fraction must be finite and positive");
     }
     if (!std::isfinite(spin_a_M_) ||
-        !std::isfinite(horizon_margin_M_)) {
+        !std::isfinite(horizon_margin_M_) ||
+        horizon_margin_M_ <= 0.0) {
         throw std::invalid_argument(
-            "Kerr derived length scales must remain finite");
+            "Kerr derived length scales must remain finite and positive");
     }
 
     const double spin_squared = spin_chi_ * spin_chi_;
@@ -122,7 +123,8 @@ KerrBoyerLindquistMetric::KerrBoyerLindquistMetric(
     inner_horizon_M_ =
         mass_M_ * spin_squared / (1.0 + horizon_factor);
     if (!std::isfinite(outer_horizon_M_) ||
-        !std::isfinite(inner_horizon_M_)) {
+        !std::isfinite(inner_horizon_M_) ||
+        !std::isfinite(outer_horizon_M_ + horizon_margin_M_)) {
         throw std::invalid_argument(
             "Kerr horizon radii must remain finite");
     }
@@ -251,14 +253,15 @@ bool KerrBoyerLindquistMetric::valid_point(
 
     const KerrScalars q = evaluate_scalars(x, mass_M_, spin_a_M_);
     if (!std::isfinite(q.sigma) || q.sigma <= 0.0 ||
-        !std::isfinite(q.delta)) {
+        !std::isfinite(q.delta) ||
+        !std::isfinite(q.A) || q.A <= 0.0) {
         return false;
     }
     const double scale = std::max(
         {std::fabs(radius), mass_M_, std::fabs(spin_a_M_)});
     const double delta_floor =
         64.0 * std::numeric_limits<double>::epsilon() * scale * scale;
-    return std::fabs(q.delta) > delta_floor;
+    return q.delta > delta_floor;
 }
 
 double KerrBoyerLindquistMetric::outer_stationary_limit_radius(

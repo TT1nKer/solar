@@ -169,6 +169,10 @@ int main() {
     Contravariant4 non_finite = equatorial;
     non_finite.v[1] = std::numeric_limits<double>::infinity();
     check("non-finite Kerr point rejected", !kerr.valid_point(non_finite));
+    Contravariant4 overflowing_A = equatorial;
+    overflowing_A.v[1] = 1.0e100;
+    check("Kerr radius with overflowing A rejected",
+          !kerr.valid_point(overflowing_A));
 
     try {
         (void)KerrBoyerLindquistMetric(0.0, 0.5);

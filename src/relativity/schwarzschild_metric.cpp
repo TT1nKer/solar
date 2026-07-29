@@ -3,6 +3,7 @@
 #include "solar/constants.h"
 
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace solar::relativity {
@@ -44,6 +45,13 @@ SchwarzschildBoyerLindquistMetric(
         horizon_margin_fraction <= 0.0) {
         throw std::invalid_argument(
             "horizon margin fraction must be finite and positive");
+    }
+    if (!std::isfinite(horizon_margin_M_) ||
+        horizon_margin_M_ <= 0.0 ||
+        mass_M_ > std::numeric_limits<double>::max() / 2.0 ||
+        !std::isfinite(2.0 * mass_M_ + horizon_margin_M_)) {
+        throw std::invalid_argument(
+            "Schwarzschild horizon scales must remain finite and positive");
     }
 }
 
@@ -129,7 +137,18 @@ bool SchwarzschildBoyerLindquistMetric::valid_point(
     if (std::fabs(std::sin(theta)) <= axis_sine_floor) {
         return false;
     }
-    return radius > outer_horizon_radius() + horizon_margin_M_;
+    if (!(radius > outer_horizon_radius() + horizon_margin_M_)) {
+        return false;
+    }
+
+    const double radius_squared = radius * radius;
+    const double sine_theta = std::sin(theta);
+    const double angular_scale =
+        radius_squared * sine_theta * sine_theta;
+    const double f = 1.0 - 2.0 * mass_M_ / radius;
+    return std::isfinite(radius_squared) && radius_squared > 0.0 &&
+           std::isfinite(angular_scale) && angular_scale > 0.0 &&
+           std::isfinite(f) && f > 0.0;
 }
 
 } // namespace solar::relativity

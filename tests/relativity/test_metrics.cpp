@@ -163,12 +163,35 @@ int main() {
     outside_theta.v[2] = 4.0;
     check("Schwarzschild theta outside chart rejected",
           !schwarzschild.valid_point(outside_theta));
+    Contravariant4 unrepresentable_radius = exterior;
+    unrepresentable_radius.v[1] = 1.0e200;
+    check("Schwarzschild radius with overflowing r squared rejected",
+          !schwarzschild.valid_point(unrepresentable_radius));
+    try {
+        (void)schwarzschild.covariant(unrepresentable_radius);
+        check("unrepresentable Schwarzschild evaluation throws", false);
+    } catch (const std::domain_error&) {
+        check("unrepresentable Schwarzschild evaluation throws", true);
+    }
 
     try {
         (void)SchwarzschildBoyerLindquistMetric(0.0);
         check("non-positive Schwarzschild mass rejected", false);
     } catch (const std::invalid_argument&) {
         check("non-positive Schwarzschild mass rejected", true);
+    }
+    try {
+        (void)SchwarzschildBoyerLindquistMetric(1.0e308);
+        check("unrepresentable Schwarzschild horizon rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("unrepresentable Schwarzschild horizon rejected", true);
+    }
+    try {
+        (void)SchwarzschildBoyerLindquistMetric(
+            1.0e200, 1.0e200);
+        check("unrepresentable Schwarzschild margin rejected", false);
+    } catch (const std::invalid_argument&) {
+        check("unrepresentable Schwarzschild margin rejected", true);
     }
 
     std::cout << "\n=== Results: " << passed << " passed, " << failed
