@@ -5,6 +5,7 @@
 *.dylib
 *.d
 build/
+/.worktrees/
 
 # main binary
 /solar
