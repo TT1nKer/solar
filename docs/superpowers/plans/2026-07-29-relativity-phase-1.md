@@ -938,10 +938,14 @@ git add docs/validation/relativity_01_hamiltonian_geodesics.md \
 git commit -m "docs: pass relativity phase 1 gate"
 ```
 
-- [ ] **Step 7: Publish a stacked draft PR**
+- [x] **Step 7: Publish a stacked draft PR**
 
 Push `codex/relativity-phase-1` and create a draft PR targeting
 `codex/relativity-phase-0b`, not `main`, while Phase 0B PR #3 remains open.
 The PR body must state the Phase 0B dependency, model boundary, exact
 verification totals, numerical maxima, skips, warnings, and next allowed
 phase.
+
+Published as draft PR
+[`#4`](https://github.com/TT1nKer/solar/pull/4), targeting
+`codex/relativity-phase-0b`.
