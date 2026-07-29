@@ -38,7 +38,7 @@ independent identities, Dual4 expressions, and five-point finite differences.
 - Consumes: `Contravariant4`, `Mat4`.
 - Produces: `Chart`, `chart_name`, abstract `Metric`, and `MinkowskiMetric`.
 
-- [ ] **Step 1: Write the missing-interface test**
+- [x] **Step 1: Write the missing-interface test**
 
 Require exact diagonal and zero derivatives:
 
@@ -54,7 +54,7 @@ check("all derivatives zero",
 Also require a non-finite coordinate to make `valid_point` false and matrix
 evaluation throw `std::domain_error`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -64,7 +64,7 @@ make tests/relativity/test_metrics
 
 Expected: compilation fails because the metric headers do not exist.
 
-- [ ] **Step 3: Implement the exact v3 interface and Minkowski**
+- [x] **Step 3: Implement the exact v3 interface and Minkowski**
 
 Use:
 
@@ -84,7 +84,7 @@ public:
 
 Return literal diagonal matrices; do not call matrix inversion.
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 ```bash
 make tests/relativity/test_metrics
@@ -107,7 +107,7 @@ git commit -m "feat: add metric interface and Minkowski spacetime"
 - Produces: `SchwarzschildBoyerLindquistMetric`, analytic covariant and inverse
   derivatives, horizon radius, and BL validity checks.
 
-- [ ] **Step 1: Add literal Schwarzschild tests**
+- [x] **Step 1: Add literal Schwarzschild tests**
 
 At `M=1,r=10,theta=pi/2`, require:
 
@@ -125,7 +125,7 @@ g_inverse_phiphi = 0.01
 Require inverse identity error below `5e-13`; reject `M<=0`, `r<=2M+margin`,
 the polar axis, theta outside `(0,pi)`, and non-finite input.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 make tests/relativity/test_metrics
@@ -133,7 +133,7 @@ make tests/relativity/test_metrics
 
 Expected: compilation fails because `schwarzschild_metric.h` is absent.
 
-- [ ] **Step 3: Implement explicit metric and analytic derivative**
+- [x] **Step 3: Implement explicit metric and analytic derivative**
 
 Use `f=1-2M/r`, explicit covariant/inverse diagonal matrices, analytic
 `partial_r` and `partial_theta` covariant entries, then:
@@ -143,7 +143,7 @@ partial_inverse[k] =
     -multiply(multiply(g_inverse, partial_covariant[k]), g_inverse);
 ```
 
-- [ ] **Step 4: Verify GREEN and commit**
+- [x] **Step 4: Verify GREEN and commit**
 
 ```bash
 make tests/relativity/test_metrics
@@ -165,7 +165,7 @@ git commit -m "feat: add Schwarzschild Boyer-Lindquist metric"
 - Produces: Kerr covariant/inverse matrices, analytic derivatives, horizon and
   stationary-limit surfaces, and checked BL domain.
 
-- [ ] **Step 1: Write literal Kerr and limit tests**
+- [x] **Step 1: Write literal Kerr and limit tests**
 
 For `M=1,chi=0.9,r=10,theta=pi/2`, compare every nonzero matrix component to
 precomputed literals independent of production code. Require:
@@ -180,7 +180,7 @@ outer_stationary_limit_radius(pi/2) == 2 within 1e-15
 At several exterior points compare `Kerr(M,0)` component by component with
 `Schwarzschild(M)`.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 make tests/relativity/test_kerr_bl
@@ -188,19 +188,19 @@ make tests/relativity/test_kerr_bl
 
 Expected: compilation fails because `kerr_bl_metric.h` is absent.
 
-- [ ] **Step 3: Implement explicit Kerr matrices**
+- [x] **Step 3: Implement explicit Kerr matrices**
 
 Implement exact v3 `Sigma`, `Delta`, `A`, covariant entries, inverse entries,
 and analytic covariant derivatives. Obtain inverse derivatives only from the
 matrix identity.
 
-- [ ] **Step 4: Implement checked surfaces and domain**
+- [x] **Step 4: Implement checked surfaces and domain**
 
 Reject non-finite/non-positive mass, `abs(chi)>=1`, non-finite coordinates,
 axis points, `Sigma<=0`, radii at/below outer horizon plus margin, and Delta
 below its double-precision scale floor.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [x] **Step 5: Verify GREEN and commit**
 
 ```bash
 make tests/relativity/test_kerr_bl
@@ -223,7 +223,7 @@ git commit -m "feat: add Kerr Boyer-Lindquist metric"
 - Consumes: analytic metric derivatives, Dual4, metric evaluation.
 - Produces: independent derivative evidence at multiple exterior points.
 
-- [ ] **Step 1: Write independent Dual4 covariant expressions**
+- [x] **Step 1: Write independent Dual4 covariant expressions**
 
 In the test only, evaluate the v3 Kerr covariant equations with coordinate
 `r` and `theta` seeded as Dual4 variables. Compare every analytic covariant
@@ -236,7 +236,7 @@ error = abs(actual - expected) /
 
 Require maximum below `1e-12` at ordinary points.
 
-- [ ] **Step 2: Write five-point inverse finite differences**
+- [x] **Step 2: Write five-point inverse finite differences**
 
 For coordinate `k` use:
 
@@ -247,12 +247,12 @@ For coordinate `k` use:
 Compare against `contravariant_derivatives` below `1e-8`, including exact zero
 stationary/axisymmetric derivatives.
 
-- [ ] **Step 3: Verify RED against deliberate mutation**
+- [x] **Step 3: Verify RED against deliberate mutation**
 
 Temporarily negate one copied expected analytic derivative in the test and
 confirm the executable exits nonzero; restore it before implementation fixes.
 
-- [ ] **Step 4: Run and correct production only for demonstrated failures**
+- [x] **Step 4: Run and correct production only for demonstrated failures**
 
 ```bash
 make tests/relativity/test_metric_derivatives
@@ -262,7 +262,7 @@ make tests/relativity/test_metric_derivatives
 Expected final result: Dual4 and five-point comparisons pass at all sampled
 ordinary exterior points.
 
-- [ ] **Step 5: Commit validation**
+- [x] **Step 5: Commit validation**
 
 ```bash
 git add tests/relativity/test_metric_derivatives.cpp \
@@ -284,7 +284,7 @@ git commit -m "test: cross-check Boyer-Lindquist metric derivatives"
 - Produces: `dispatch_relativity`, human/JSON metric inspection, truthful exit
   codes, recursively compiled CLI translation units.
 
-- [ ] **Step 1: Write real-process CLI tests**
+- [x] **Step 1: Write real-process CLI tests**
 
 Run the actual binary from the test:
 
@@ -297,7 +297,7 @@ Require exit 0 and output fields `"metric":"kerr-bl"` and
 `"inverse_error"`. Require nonzero exits for missing `--x`, `--spin 1`,
 unknown metric, malformed coordinate list, and unknown option.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 ```bash
 make tests/relativity/test_metric_cli
@@ -306,20 +306,20 @@ make tests/relativity/test_metric_cli
 
 Expected: test fails because the command is unknown.
 
-- [ ] **Step 3: Make CLI translation units recursive**
+- [x] **Step 3: Make CLI translation units recursive**
 
 Replace the single `CLI_SRC` link with sorted recursive `CLI_SRCS`,
 `CLI_OBJS`, dependency files, and a `cli/%.o` rule. Make `test` depend on
 `solar` so real-process tests have the executable.
 
-- [ ] **Step 4: Implement strict parsing and output**
+- [x] **Step 4: Implement strict parsing and output**
 
 Use `std::stod` with full-string consumption and an exact four-value coordinate
 parser. Construct the selected metric, verify `valid_point`, compute both
 matrices and inverse-identity error, then print JSON or human output. Catching
 at top-level `main` preserves nonzero failures.
 
-- [ ] **Step 5: Verify GREEN and commit**
+- [x] **Step 5: Verify GREEN and commit**
 
 ```bash
 make clean
@@ -341,7 +341,7 @@ git commit -m "feat: add relativity metric CLI"
 - Consumes: actual test/build/CLI results.
 - Produces: reproducible metric evidence and Phase 0B state.
 
-- [ ] **Step 1: Run complete verification**
+- [x] **Step 1: Run complete verification**
 
 ```bash
 make clean
@@ -356,19 +356,19 @@ make test
 git diff --check
 ```
 
-- [ ] **Step 2: Audit the final diff**
+- [x] **Step 2: Audit the final diff**
 
 Check formulas against v3 line by line, dependency direction, every invalid
 domain, absence of clamping, exact zero derivative dimensions, test mutation
 coverage, unchanged legacy CLI behavior, and no Phase 1 code.
 
-- [ ] **Step 3: Write validation and status**
+- [x] **Step 3: Write validation and status**
 
 Record literal matrix values, maximum inverse error, maximum Dual4 error,
 maximum five-point error, commands, platform, skipped external tests, model
 boundary, at least three likely bugs, and fastest falsification inputs.
 
-- [ ] **Step 4: Mark and commit the gate**
+- [x] **Step 4: Mark and commit the gate**
 
 Set `CURRENT_PHASE: 0B` and `PHASE_STATE: PASSED` only if every command exits
 as expected.
