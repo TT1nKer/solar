@@ -849,7 +849,7 @@ Stage the production file only if it changed for a demonstrated failure.
 - Consumes: all actual build/test/numerical results.
 - Produces: the reproducible Phase 1 evidence and gate state.
 
-- [ ] **Step 1: Run the complete release verification**
+- [x] **Step 1: Run the complete release verification**
 
 ```bash
 make clean
@@ -865,7 +865,7 @@ git diff --check
 Run an invalid-metric/constraint test separately and confirm the process exits
 nonzero when its expected reason is deliberately changed.
 
-- [ ] **Step 2: Run sanitizer verification**
+- [x] **Step 2: Run sanitizer verification**
 
 Clean and rebuild the complete relativity test set with:
 
@@ -884,7 +884,7 @@ UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
 Afterward, clean and rerun the normal release build/test so the worktree does
 not retain sanitizer artifacts.
 
-- [ ] **Step 3: Audit the complete Phase 1 diff**
+- [x] **Step 3: Audit the complete Phase 1 diff**
 
 Check line by line:
 
@@ -902,7 +902,7 @@ Check line by line:
 - no files with mixed independent responsibilities that need an authorized
   split.
 
-- [ ] **Step 4: Write the validation report**
+- [x] **Step 4: Write the validation report**
 
 Record:
 
@@ -917,7 +917,7 @@ Record:
 - at least three most likely bugs;
 - fastest commands/parameter mutations to falsify the gate.
 
-- [ ] **Step 5: Mark the phase gate**
+- [x] **Step 5: Mark the phase gate**
 
 Only after every required command succeeds, set:
 
@@ -929,7 +929,7 @@ NEXT_ALLOWED_ACTION: Phase 2 only
 
 Mark every plan checkbox complete.
 
-- [ ] **Step 6: Commit the gate**
+- [x] **Step 6: Commit the gate**
 
 ```bash
 git add docs/validation/relativity_01_hamiltonian_geodesics.md \
