@@ -572,7 +572,7 @@ git commit -m "feat(relativity): add Kerr-Schild boundary events"
   generic integration, and user events.
 - Produces: independent end-to-end coordinate-equivalence evidence.
 
-- [ ] **Step 1: Add moderate null and timelike fixtures**
+- [x] **Step 1: Add moderate null and timelike fixtures**
 
 Build at least six fixtures spanning null/timelike kind, both spin signs,
 prograde/retrograde momenta, and distinct inclinations. Initialize constrained
@@ -582,7 +582,7 @@ the KS event state back to BL. Record scaled errors for
 `(t,r,theta,wrapped phi)` and all four covariant momentum components, plus
 termination reason, Hamiltonian constraint, E, and Lz drift.
 
-- [ ] **Step 2: Run the new acceptance crosscheck**
+- [x] **Step 2: Run the new acceptance crosscheck**
 
 Run:
 
@@ -596,14 +596,14 @@ reports the first measured physical mismatch. A first-run pass is valid
 because Tasks 1-5 already provide the complete production surface; do not
 manufacture a failure or alter correct production code merely to force red.
 
-- [ ] **Step 3: Correct only identified implementation defects**
+- [x] **Step 3: Correct only identified implementation defects**
 
 Use the printed worst fixture/component to isolate whether the defect is in
 position mapping, covector Jacobian orientation, KS metric derivatives,
 event localization, or invariant callback wiring. Correct the owning L1
 module without changing a gate or adding fixture-specific behavior.
 
-- [ ] **Step 4: Add a safe near-horizon overlap fixture**
+- [x] **Step 4: Add a safe near-horizon overlap fixture**
 
 Place the target above `r_+ + overlap_margin`, close enough to exercise the
 large logarithmic derivatives. Require matching termination and position/
@@ -611,7 +611,7 @@ momentum errors `<1e-6`. For ordinary fixtures, sort errors and compute the
 nearest-rank P95; require position and momentum P95 `<1e-8`, Hamiltonian
 error `<1e-10`, and E/Lz drift `<1e-12`.
 
-- [ ] **Step 5: Run the complete crosscheck twice**
+- [x] **Step 5: Run the complete crosscheck twice**
 
 Run:
 
@@ -623,7 +623,7 @@ Run:
 Expected: both runs pass and report identical fixture classifications and
 gate values to printed precision.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity src/relativity \
