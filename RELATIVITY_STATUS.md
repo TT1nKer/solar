@@ -1,8 +1,8 @@
 # Solar Relativity Status
 
-CURRENT_PHASE: 3
+CURRENT_PHASE: 4
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: eb42b19bb32c20a294532cb2d441dc403c201d94
+LAST_VERIFIED_COMMIT: b838c1f316ddd8c69c38234e711fe603202e0f47
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
   Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
 LAST_VERIFIED_COMMANDS:
@@ -11,8 +11,8 @@ LAST_VERIFIED_COMMANDS:
 - `make test-external-consumer`
 - GitHub C++ CI build, complete test suite, installed external consumer, CLI,
   and sample-command gates
-- all 27 `tests/relativity/test_*` executables
-- AddressSanitizer and UndefinedBehaviorSanitizer build plus all five Phase 3
+- all 34 `tests/relativity/test_*` executables
+- AddressSanitizer and UndefinedBehaviorSanitizer build plus all seven Phase 4
   focused executables
 - DOPRI, Hamiltonian, RMS, dense-output, invalid-domain, observer, local-state,
   Carter, special-orbit, and analytic/numerical-shadow checks
@@ -20,6 +20,7 @@ LAST_VERIFIED_COMMANDS:
   and invalid-metric-as-capture mutation checks
 - independent 80-decimal Kerr special-radius and Bardeen-edge probe
 - controlled `1e-4M` common-event worldline mutation
+- canonical covector-transform transpose mutation
 - `git diff --check`
 
 ACTUALLY_COMPLETED:
@@ -81,15 +82,35 @@ ACTUALLY_COMPLETED:
   solver: null/timelike, both spin signs, Schwarzschild, radial return, and
   polar return. Release P95/maximum worldline error is `2.27726e-11`.
 - Proved the separated API through a clean installed external consumer.
-- Passed 2078/2078 relativity assertions across 27 executables and 67/67
+- Added Cartesian ingoing Kerr–Schild covariant/inverse metrics from the
+  null-form identity, a cancellation-safe positive implicit radius, analytic
+  radius gradient, and `Dual4` inverse-metric derivatives.
+- Added a finite exterior Boyer–Lindquist/Kerr–Schild overlap transform with
+  full position Jacobians, inverse maps, angle wrapping, explicit axis/margin
+  refusal, and inverse-transpose canonical momentum conversion.
+- Added chart-aware stationary-energy and axial-angular-momentum callbacks to
+  the generic invariant monitor while preserving the existing Boyer–Lindquist
+  defaults and aggregate initialization compatibility.
+- Added explicit decreasing-radius outer-horizon and interior-cutoff events.
+  A localized timelike plunge restarts at the exact horizon event state and
+  evolves a positive affine interval to `max(0.05M, configured)`.
+- Cross-validated ordinary and near-horizon Kerr–Schild Hamiltonian flows
+  against Boyer–Lindquist at common exterior events. Ordinary position and
+  momentum P95 errors are `6.64417e-12` and `6.24937e-12`; near-horizon errors
+  are `6.13639e-10` and `2.47107e-10`.
+- Proved the installed public API through a clean consumer that constructs the
+  Kerr–Schild metric, transforms canonical state, integrates, and localizes an
+  event.
+- Passed 2267/2267 relativity assertions across 34 executables and 67/67
   fixture-independent legacy assertions in release mode.
-- Passed all 165 assertions in the five Phase 3 focused executables under
+- Passed all 189 assertions in the seven Phase 4 focused executables under
   AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:
 - Analytic elliptic Kerr geodesics, fundamental frequencies, or long-time
   structure-preserving timelike integration.
-- Kerr–Schild coordinates, reliable physical horizon crossing, interior evolution, or singularity treatment.
+- Extremal/negative-radius Kerr extension, ring-singularity treatment, or
+  quantum-gravity interior model.
 - Disk/material models, radiative transfer, reference renderer, image/movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
 - DE440's eight external-data assertions on this machine.
 - Linux sanitizer or non-x86_64/non-arm64 verification.
@@ -102,13 +123,20 @@ CURRENT_BLOCKERS:
 
 MOST_LIKELY_BUGS:
 - Endpoint-bracket event detection can miss tangencies, multiple roots, or an even number of roots inside one accepted step.
-- Boyer–Lindquist invalid-domain termination is not physical horizon capture; Phase 4 Kerr–Schild validation is still required.
+- Boyer–Lindquist invalid-domain termination remains chart failure, not
+  physical capture; callers requiring horizon crossing must use the validated
+  Cartesian Kerr–Schild path.
 - The Kerr BL precision boundary is intentionally stricter than the geometric
   exterior and can vary slightly with floating-point platform; callers must
   treat rejection as chart/numerical invalidity, not capture.
 - Long bound timelike trajectories can accumulate secular error because Phase 1 has no structure-preserving integrator.
 - Near-degenerate arbitrary-observer seeds can cross the fixed numerical
   rejection threshold differently on other floating-point platforms.
+- Kerr–Schild supports positive-radius subextremal Kerr only. The BL/KS
+  transform intentionally refuses the polar axis and `r<=r_++margin`; callers
+  must initialize in a safe exterior overlap.
+- Interior evolution stops at the explicit numerical/model boundary
+  `max(0.05M, configured)` and does not represent the ring singularity.
 - The universal tolerance factory follows v3 component defaults but is not
   chart-aware; non-unit mass scales with angular BL coordinates need a
   dedicated convergence sweep before scientific use.
@@ -160,6 +188,22 @@ FASTEST_WAY_TO_FALSIFY:
   comparisons, and Hamiltonian/Carter gates.
 - `./tests/relativity/test_geodesics_kerr`: ordinary Kerr constraint, exact
   monitored E/Lz, Carter drift, denominator semantics, and callback failures.
+- `./tests/relativity/test_geodesic_invariant_callbacks`: chart-aware E/Lz
+  evaluators, disabled-monitor behavior, legacy defaults, and callback failure
+  semantics.
+- `./tests/relativity/test_kerr_schild`: radius quartic, null one-form,
+  analytic metric inverse, horizon/interior domain, Cartesian invariants, and
+  invalid parameters.
+- `./tests/relativity/test_kerr_schild_derivatives`: independent radius
+  gradient and five-point inverse-derivative comparisons.
+- `./tests/relativity/test_kerr_chart_transform`: position/Jacobian/canonical
+  momentum round trips, pairing/Hamiltonian invariance, differential signs,
+  overlap/axis refusal, and both spin signs.
+- `./tests/relativity/test_kerr_bl_ks_crosscheck`: ordinary and near-horizon
+  common-event worldlines, constraints, E/Lz, and convergence.
+- `./tests/relativity/test_geodesics_kerr_schild`: exact horizon localization,
+  tetrad regularity, restart continuity, positive interior evolution, cutoff
+  localization, and timelike constraints.
 - `./tests/relativity/test_kerr_separated_potentials`: literal `R/U`,
   derivatives, scaling, and invalid domains.
 - `./tests/relativity/test_kerr_separated_state`: Hamilton/Mino direction,
@@ -176,6 +220,5 @@ FASTEST_WAY_TO_FALSIFY:
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Phase 4 only: Kerr–Schild coordinates, chart transforms, and physical
-  horizon-crossing validation. Do not enter matter, transfer, renderer, GPU,
-  or UI work before the Phase 4 gate passes.
+- Phase 5 invariant radiative transfer. Do not enter the reference renderer,
+  GPU, or UI before the Phase 5 gate passes.

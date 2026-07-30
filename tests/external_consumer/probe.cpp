@@ -1,4 +1,8 @@
+#include "solar/relativity/geodesic_integrator.h"
 #include "solar/relativity/kerr_shadow.h"
+#include "solar/relativity/kerr_chart_transform.h"
+#include "solar/relativity/kerr_schild_events.h"
+#include "solar/relativity/kerr_schild_metric.h"
 #include "solar/relativity/kerr_separated.h"
 #include "solar/relativity/local_initialization.h"
 #include "solar/relativity/observer.h"
@@ -87,6 +91,72 @@ int main() {
         return 6;
     }
 
+    const solar::relativity::KerrSchildCartesianMetric
+        kerr_schild_metric(1.0, 0.5);
+    const solar::relativity::KerrChartTransform transform(
+        1.0, 0.5);
+    const solar::relativity::PhaseSpaceState kerr_schild_photon =
+        transform.state_to_kerr_schild(*photon.state);
+    const auto covariant =
+        kerr_schild_metric.covariant(kerr_schild_photon.x);
+    const auto contravariant =
+        kerr_schild_metric.contravariant(
+            kerr_schild_photon.x);
+    const auto identity =
+        solar::relativity::multiply(
+            covariant, contravariant);
+    double identity_error = 0.0;
+    for (std::size_t row = 0; row < 4; ++row) {
+        for (std::size_t column = 0; column < 4; ++column) {
+            const double expected =
+                row == column ? 1.0 : 0.0;
+            identity_error = std::max(
+                identity_error,
+                std::abs(identity[row][column] - expected));
+        }
+    }
+    if (kerr_schild_metric.chart() !=
+            solar::relativity::Chart::KerrSchildCartesian ||
+        identity_error >= 5.0e-13) {
+        std::cerr << "installed Kerr-Schild metric failed\n";
+        return 7;
+    }
+
+    auto kerr_schild_config =
+        solar::relativity::GeodesicIntegrationConfig::cpu_reference(
+            solar::relativity::GeodesicKind::Null,
+            1.0,
+            1.0e-3,
+            1.0e-2,
+            5.0e-2);
+    kerr_schild_config.monitor_energy = true;
+    kerr_schild_config.monitor_lz = true;
+    kerr_schild_config.stationary_energy_evaluator =
+        solar::relativity::kerr_schild_stationary_energy;
+    kerr_schild_config.axial_angular_momentum_evaluator =
+        solar::relativity::kerr_schild_axial_angular_momentum;
+    const auto kerr_schild =
+        solar::relativity::GeodesicIntegrator(
+            kerr_schild_metric)
+            .integrate(
+                kerr_schild_photon,
+                kerr_schild_config);
+    const auto horizon_event =
+        solar::relativity::make_kerr_schild_horizon_event(
+            kerr_schild_metric, 1.0e-10);
+    if (kerr_schild.diagnostics.reason !=
+            solar::relativity::TerminationReason::MaxAffine ||
+        kerr_schild.diagnostics.accepted_steps == 0 ||
+        kerr_schild.diagnostics.max_constraint_error >= 1.0e-10 ||
+        kerr_schild.diagnostics.max_energy_rel_error >= 1.0e-12 ||
+        kerr_schild.diagnostics.max_lz_rel_error >= 1.0e-12 ||
+        horizon_event.direction !=
+            solar::relativity::EventDirection::Decreasing ||
+        horizon_event.function(kerr_schild_photon) <= 0.0) {
+        std::cerr << "installed Kerr-Schild integration failed\n";
+        return 8;
+    }
+
     std::cout << std::setprecision(17)
               << "{\"solar_version\":\"" << solar::version
               << "\",\"physics_contract\":\"" << solar::physics_contract
@@ -97,6 +167,12 @@ int main() {
               << separated.diagnostics.accepted_steps
               << ",\"separated_constraint\":"
               << separated.diagnostics.max_constraint_error
+              << ",\"ks_steps\":"
+              << kerr_schild.diagnostics.accepted_steps
+              << ",\"ks_constraint\":"
+              << kerr_schild.diagnostics.max_constraint_error
+              << ",\"ks_inverse_error\":"
+              << identity_error
               << "}\n";
     return 0;
 }

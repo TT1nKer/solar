@@ -31,6 +31,8 @@ struct GeodesicIntegrationConfig {
     bool monitor_energy = false;
     bool monitor_lz = false;
     InvariantEvaluator carter_evaluator;
+    InvariantEvaluator stationary_energy_evaluator;
+    InvariantEvaluator axial_angular_momentum_evaluator;
 
     static GeodesicIntegrationConfig cpu_reference(
         GeodesicKind kind,
