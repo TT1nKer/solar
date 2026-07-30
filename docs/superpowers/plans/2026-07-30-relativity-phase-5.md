@@ -380,7 +380,7 @@ git commit -m "feat(relativity): add transfer model boundary"
   `AnalyticCircularDiskFluid`, plus internal
   `detail::KerrFluidPoint` and `detail::evaluate_kerr_circular_fluid_point`.
 
-- [ ] **Step 1: Write failing disk-profile tests**
+- [x] **Step 1: Write failing disk-profile tests**
 
 Configure `M=2`, `chi=0.5`, prograde, `r_out=30M`,
 `density_scale=4`, `temperature_scale=10`, `density_power=1.5`.
@@ -394,7 +394,7 @@ Require:
 - both spin signs and orbit senses produce finite future unit-timelike
   velocities.
 
-- [ ] **Step 2: Add failing BL/KS common-event tests**
+- [x] **Step 2: Add failing BL/KS common-event tests**
 
 Transform at least six equatorial safe-overlap points spanning
 `chi={-0.7,0,0.6}` and both senses. Sample the same event in BL and KS.
@@ -411,7 +411,7 @@ component maximum error `<1e-10`. Mismatched model/metric Kerr parameters and
 unsupported metrics throw `std::domain_error` directly and become
 `InvalidFluidSample` through `evaluate_transfer_coefficients`.
 
-- [ ] **Step 3: Run the fluid test and confirm red**
+- [x] **Step 3: Run the fluid test and confirm red**
 
 Run:
 
@@ -421,7 +421,7 @@ make -j4 tests/relativity/test_fluid_models
 
 Expected: compilation fails because the disk config/class are absent.
 
-- [ ] **Step 4: Implement shared Kerr fluid kinematics**
+- [x] **Step 4: Implement shared Kerr fluid kinematics**
 
 Declare the public disk configuration exactly:
 
@@ -468,7 +468,7 @@ worldlines and unsafe overlap with an invalid internal result. Throw
 `std::domain_error` for unsupported metric classes or model/metric parameter
 mismatch; do not spatially copy velocity.
 
-- [ ] **Step 5: Implement the disk profile**
+- [x] **Step 5: Implement the disk profile**
 
 Use `std::optional<double> inner_radius_M` in the config. Resolve an absent
 value to ISCO at construction. Sampling checks:
@@ -481,7 +481,7 @@ abs(cos(theta)) <= surface_height_tolerance
 then evaluates the exact profile from the design. Return `valid=true` even at
 the zero-temperature inner edge because it is a legitimate disk boundary.
 
-- [ ] **Step 6: Run focused and baseline tests**
+- [x] **Step 6: Run focused and baseline tests**
 
 Run:
 
@@ -493,7 +493,7 @@ make -j4 test
 
 Expected: all assertions pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add include/solar/relativity/fluid_model.h \
