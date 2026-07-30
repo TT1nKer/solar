@@ -3,11 +3,14 @@
 CURRENT_PHASE: 3
 PHASE_STATE: PASSED
 LAST_VERIFIED_COMMIT: eb42b19bb32c20a294532cb2d441dc403c201d94
-LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0
+LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
+  Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
 LAST_VERIFIED_COMMANDS:
 - `make clean`
 - `make -j4 test`
 - `make test-external-consumer`
+- GitHub C++ CI build, complete test suite, installed external consumer, CLI,
+  and sample-command gates
 - all 27 `tests/relativity/test_*` executables
 - AddressSanitizer and UndefinedBehaviorSanitizer build plus all five Phase 3
   focused executables
@@ -89,7 +92,7 @@ NOT_COMPLETED:
 - Kerr–Schild coordinates, reliable physical horizon crossing, interior evolution, or singularity treatment.
 - Disk/material models, radiative transfer, reference renderer, image/movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
 - DE440's eight external-data assertions on this machine.
-- GCC/Linux or non-arm64 verification.
+- Linux sanitizer or non-x86_64/non-arm64 verification.
 - The one-off Carter-Q, Kerr inverse-domain, convergence, and multiprecision
   audit probes are supplementary evidence, not committed CI regression
   executables.
@@ -126,7 +129,8 @@ MOST_LIKELY_BUGS:
   Boyer–Lindquist azimuth term is coordinate-singular.
 - The smooth turn-phase invariant ceiling is `1e-10`; a trajectory exceeding
   it fails explicitly, but denser multiprecision characterization is pending.
-- Only Apple Clang 16 on macOS arm64 was verified locally.
+- Sanitizer validation is limited to Apple Clang 16 on macOS arm64; the
+  Ubuntu/GCC CI run covers Release behavior only.
 - Missing default DE440 data remains a visible skip.
 
 FASTEST_WAY_TO_FALSIFY:

@@ -108,8 +108,10 @@ was reverted before the passing runs.
 Verified implementation commit:
 `eb42b19bb32c20a294532cb2d441dc403c201d94`.
 
-Platform: Darwin 23.6.0 arm64, Apple Clang 16.0.0. No Linux, GCC, RTX 3080, or
-DE440-data validation is claimed.
+Local platform: Darwin 23.6.0 arm64, Apple Clang 16.0.0. GitHub C++ CI also
+passed the complete Release suite and installed consumer on Ubuntu 24.04
+x86_64 with GCC 13.3.0. No Linux sanitizer, RTX 3080, or DE440-data validation
+is claimed.
 
 ## Result
 
