@@ -93,6 +93,21 @@ AnalyticCircularDiskConfig disk_config(
     };
 }
 
+AnalyticOpticallyThinTorusConfig torus_config() {
+    return AnalyticOpticallyThinTorusConfig{
+        1.0,
+        0.6,
+        OrbitSense::Prograde,
+        8.0,
+        2.0,
+        0.2,
+        5.0,
+        7.0,
+        0.4,
+        1.0e-4,
+    };
+}
+
 Contravariant4 bl_point(double radius, double theta) {
     return Contravariant4{
         Vec4{{0.25, radius, theta, -0.4}}};
@@ -310,6 +325,137 @@ int main() {
                 bl_point(radius, 0.5 * pi));
         });
 
+    const AnalyticOpticallyThinTorus torus(torus_config());
+    const KerrBoyerLindquistMetric torus_bl_metric(1.0, 0.6);
+    const KerrSchildCartesianMetric torus_ks_metric(1.0, 0.6);
+    const Contravariant4 torus_center =
+        bl_point(8.0, 0.5 * pi);
+    const FluidSample torus_center_sample =
+        torus.sample(torus_bl_metric, torus_center);
+    check_near(
+        "torus center density equals configured scale",
+        torus_center_sample.density,
+        5.0,
+        2.0e-14);
+    check_near(
+        "torus center temperature equals configured scale",
+        torus_center_sample.temperature,
+        7.0,
+        2.0e-14);
+    check_unit_velocity(
+        "torus center velocity is future unit timelike",
+        torus_bl_metric,
+        torus_center,
+        torus_center_sample);
+
+    const double one_width_shape = std::exp(-0.5);
+    const FluidSample one_width =
+        torus.sample(
+            torus_bl_metric,
+            bl_point(10.0, 0.5 * pi));
+    check_near(
+        "torus radial Gaussian is literal",
+        one_width.density,
+        5.0 * one_width_shape,
+        2.0e-14);
+    check_near(
+        "torus temperature power is literal",
+        one_width.temperature,
+        7.0 * std::pow(one_width_shape, 0.4),
+        2.0e-14);
+
+    const FluidSample torus_north =
+        torus.sample(
+            torus_bl_metric,
+            bl_point(8.0, 0.5 * pi - 0.1));
+    const FluidSample torus_south =
+        torus.sample(
+            torus_bl_metric,
+            bl_point(8.0, 0.5 * pi + 0.1));
+    check_near(
+        "torus density is north-south symmetric",
+        torus_north.density,
+        torus_south.density,
+        2.0e-14);
+    check_near(
+        "torus temperature is north-south symmetric",
+        torus_north.temperature,
+        torus_south.temperature,
+        2.0e-14);
+    check(
+        "torus compact cutoff returns vacuum",
+        !torus.sample(
+                  torus_bl_metric,
+                  bl_point(20.0, 0.5 * pi))
+             .valid);
+
+    const Contravariant4 torus_bl =
+        bl_point(8.5, 0.5 * pi - 0.05);
+    const KerrChartTransform torus_transform(1.0, 0.6);
+    const Contravariant4 torus_ks =
+        torus_transform.position_to_kerr_schild(torus_bl);
+    const FluidSample torus_bl_sample =
+        torus.sample(torus_bl_metric, torus_bl);
+    const FluidSample torus_ks_sample =
+        torus.sample(torus_ks_metric, torus_ks);
+    check(
+        "common BL/KS torus samples are valid",
+        torus_bl_sample.valid && torus_ks_sample.valid);
+    check_near(
+        "common BL/KS torus density agrees",
+        torus_ks_sample.density,
+        torus_bl_sample.density,
+        1.0e-12);
+    check_near(
+        "common BL/KS torus temperature agrees",
+        torus_ks_sample.temperature,
+        torus_bl_sample.temperature,
+        1.0e-12);
+    check_unit_velocity(
+        "torus BL velocity is future unit timelike",
+        torus_bl_metric,
+        torus_bl,
+        torus_bl_sample);
+    check_unit_velocity(
+        "torus KS velocity is future unit timelike",
+        torus_ks_metric,
+        torus_ks,
+        torus_ks_sample);
+    const Contravariant4 expected_torus_ks_velocity =
+        apply_jacobian(
+            torus_transform
+                .boyer_lindquist_to_kerr_schild_jacobian(
+                    torus_bl),
+            torus_bl_sample.four_velocity);
+    const double torus_chart_error =
+        maximum_component_error(
+            torus_ks_sample.four_velocity,
+            expected_torus_ks_velocity);
+    maximum_chart_velocity_error =
+        std::max(
+            maximum_chart_velocity_error,
+            torus_chart_error);
+    check(
+        "KS torus velocity uses full chart Jacobian",
+        torus_chart_error < 1.0e-10,
+        torus_chart_error);
+
+    check_domain_error(
+        "torus rejects unsupported metric",
+        [&] {
+            (void)torus.sample(
+                minkowski,
+                Contravariant4{
+                    Vec4{{0.0, 8.0, 0.0, 0.0}}});
+        });
+    check_domain_error(
+        "torus rejects mismatched Kerr parameters",
+        [&] {
+            (void)torus.sample(
+                KerrBoyerLindquistMetric(1.0, 0.5),
+                torus_center);
+        });
+
     const double nan =
         std::numeric_limits<double>::quiet_NaN();
     check_invalid_argument(
@@ -384,6 +530,34 @@ int main() {
                 disk_config(2.0, 0.5, OrbitSense::Prograde);
             config.sense = static_cast<OrbitSense>(99);
             (void)AnalyticCircularDiskFluid(config);
+        });
+    check_invalid_argument(
+        "torus rejects zero radial width",
+        [&] {
+            auto config = torus_config();
+            config.radial_width_M = 0.0;
+            (void)AnalyticOpticallyThinTorus(config);
+        });
+    check_invalid_argument(
+        "torus rejects zero angular width",
+        [&] {
+            auto config = torus_config();
+            config.angular_width = 0.0;
+            (void)AnalyticOpticallyThinTorus(config);
+        });
+    check_invalid_argument(
+        "torus rejects invalid cutoff fraction",
+        [&] {
+            auto config = torus_config();
+            config.density_cutoff_fraction = 1.0;
+            (void)AnalyticOpticallyThinTorus(config);
+        });
+    check_invalid_argument(
+        "torus rejects negative temperature power",
+        [&] {
+            auto config = torus_config();
+            config.temperature_power = -0.1;
+            (void)AnalyticOpticallyThinTorus(config);
         });
 
     std::cout.precision(17);

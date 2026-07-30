@@ -518,7 +518,7 @@ git commit -m "feat(relativity): add analytic Kerr disk fluid"
 - Produces: `AnalyticOpticallyThinTorusConfig` and
   `AnalyticOpticallyThinTorus`.
 
-- [ ] **Step 1: Add failing torus tests**
+- [x] **Step 1: Add failing torus tests**
 
 Configure:
 
@@ -536,7 +536,7 @@ and explicit unsupported/mismatched metric errors. Reject every non-finite or
 out-of-domain config field. Model/metric errors must throw directly and become
 `InvalidFluidSample` at the trusted evaluation boundary.
 
-- [ ] **Step 2: Run and confirm the new red state**
+- [x] **Step 2: Run and confirm the new red state**
 
 Run:
 
@@ -546,7 +546,7 @@ make -j4 tests/relativity/test_fluid_models
 
 Expected: compilation fails because the torus config/class are absent.
 
-- [ ] **Step 3: Implement the exact compact Gaussian**
+- [x] **Step 3: Implement the exact compact Gaussian**
 
 Declare:
 
@@ -589,7 +589,7 @@ const double shape = std::exp(
 Return vacuum when `shape<density_cutoff_fraction`; otherwise use the design
 density/temperature powers and the shared caller-chart circular velocity.
 
-- [ ] **Step 4: Run focused and baseline tests**
+- [x] **Step 4: Run focused and baseline tests**
 
 Run:
 
@@ -601,7 +601,7 @@ make -j4 test
 
 Expected: all assertions pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/fluid_model.h \

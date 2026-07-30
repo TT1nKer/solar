@@ -69,4 +69,35 @@ private:
     double inner_radius_M_;
 };
 
+struct AnalyticOpticallyThinTorusConfig {
+    double mass_M;
+    double spin_chi;
+    OrbitSense sense = OrbitSense::Prograde;
+    double center_radius_M;
+    double radial_width_M;
+    double angular_width;
+    double density_scale;
+    double temperature_scale;
+    double temperature_power = 0.0;
+    double density_cutoff_fraction = 1.0e-4;
+};
+
+/**
+ * Compact kinematic Gaussian torus for transfer validation.
+ *
+ * This is not a Fishbone-Moncrief equilibrium or a GRMHD snapshot.
+ */
+class AnalyticOpticallyThinTorus final : public FluidModel {
+public:
+    explicit AnalyticOpticallyThinTorus(
+        AnalyticOpticallyThinTorusConfig config);
+
+    FluidSample sample(
+        const Metric& metric,
+        const Contravariant4& x) const override;
+
+private:
+    AnalyticOpticallyThinTorusConfig config_;
+};
+
 } // namespace solar::relativity
