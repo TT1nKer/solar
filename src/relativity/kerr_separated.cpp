@@ -1,0 +1,430 @@
+#include "solar/relativity/kerr_separated.h"
+
+#include "geodesic_event_selection.h"
+#include "kerr_separated_config_internal.h"
+#include "kerr_separated_events.h"
+#include "kerr_separated_state.h"
+#include "kerr_separated_step.h"
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <utility>
+
+namespace solar::relativity {
+namespace {
+
+enum class RejectionKind {
+    None,
+    ErrorEstimate,
+    ForbiddenPotential,
+    InvalidMetricPoint,
+    NonFiniteStage,
+};
+
+bool finite_phase_space(const PhaseSpaceState& state) noexcept {
+    return std::isfinite(state.affine) &&
+           state.x.v.all_finite() &&
+           state.p.v.all_finite();
+}
+
+TerminationReason rejection_reason(
+    RejectionKind kind) noexcept {
+    if (kind == RejectionKind::InvalidMetricPoint) {
+        return TerminationReason::InvalidMetricPoint;
+    }
+    if (kind == RejectionKind::NonFiniteStage) {
+        return TerminationReason::NonFiniteState;
+    }
+    return TerminationReason::StepUnderflow;
+}
+
+std::string rejection_message(
+    RejectionKind kind,
+    const char* suffix) {
+    if (kind == RejectionKind::ForbiddenPotential) {
+        return std::string("turning-potential trial rejection ") +
+               suffix;
+    }
+    if (kind == RejectionKind::InvalidMetricPoint) {
+        return std::string("metric-domain trial rejection ") +
+               suffix;
+    }
+    if (kind == RejectionKind::NonFiniteStage) {
+        return std::string("non-finite trial rejection ") +
+               suffix;
+    }
+    return std::string("error-estimate rejection ") + suffix;
+}
+
+double affine_root_tolerance(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrSeparatedConfig& config) noexcept {
+    return config.root_tolerance * metric.mass();
+}
+
+} // namespace
+
+KerrSeparatedIntegrator::KerrSeparatedIntegrator(
+    const KerrBoyerLindquistMetric& metric) noexcept
+    : metric_(&metric) {}
+
+KerrSeparatedIntegrationResult
+KerrSeparatedIntegrator::integrate(
+    const PhaseSpaceState& initial,
+    const KerrSeparatedConfig& config,
+    const std::vector<GeodesicEvent>& events) const {
+    detail::validate_kerr_separated_config(config);
+
+    KerrSeparatedDiagnostics diagnostics{};
+    KerrConstants constants{
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::quiet_NaN(),
+        std::numeric_limits<double>::quiet_NaN(),
+    };
+    const auto terminate =
+        [&diagnostics, &constants](
+            const PhaseSpaceState& state,
+            TerminationReason reason,
+            std::string message,
+            std::optional<EventHit> event = std::nullopt) {
+            diagnostics.reason = reason;
+            diagnostics.message = std::move(message);
+            return KerrSeparatedIntegrationResult{
+                state,
+                constants,
+                diagnostics,
+                std::move(event),
+            };
+        };
+
+    if (!finite_phase_space(initial)) {
+        return terminate(
+            initial,
+            TerminationReason::NonFiniteState,
+            "initial phase-space state is non-finite");
+    }
+    if (!metric_->valid_point(initial.x)) {
+        return terminate(
+            initial,
+            TerminationReason::InvalidMetricPoint,
+            "initial state is outside the Kerr BL domain");
+    }
+
+    std::vector<GeodesicEvent> active_events = events;
+    active_events.push_back(GeodesicEvent{
+        "affine-displacement limit",
+        [origin = initial.affine,
+         limit = config.max_affine](
+            const PhaseSpaceState& state) {
+            return std::fabs(state.affine - origin) - limit;
+        },
+        EventDirection::Any,
+        TerminationReason::MaxAffine,
+        affine_root_tolerance(*metric_, config),
+    });
+    if (std::isfinite(config.max_coordinate_time)) {
+        active_events.push_back(GeodesicEvent{
+            "coordinate-time limit",
+            [origin = initial.x.v[0],
+             limit = config.max_coordinate_time](
+                const PhaseSpaceState& state) {
+                return std::fabs(state.x.v[0] - origin) - limit;
+            },
+            EventDirection::Any,
+            TerminationReason::MaxCoordinateTime,
+            affine_root_tolerance(*metric_, config),
+        });
+    }
+
+    const std::optional<std::string> event_contract_failure =
+        detail::validate_geodesic_event_contracts(active_events);
+    if (event_contract_failure.has_value()) {
+        return terminate(
+            initial,
+            TerminationReason::EventRootFailure,
+            *event_contract_failure);
+    }
+
+    try {
+        constants = evaluate_kerr_constants(
+            *metric_, initial, config.kind);
+    } catch (const std::exception& error) {
+        return terminate(
+            initial,
+            TerminationReason::NonFiniteState,
+            std::string(
+                "initial Kerr constants evaluation failed: ") +
+                error.what());
+    }
+
+    const detail::GeodesicEventSelection initial_event =
+        detail::select_initial_any_event(initial, active_events);
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Failed) {
+        return terminate(
+            initial,
+            TerminationReason::EventRootFailure,
+            initial_event.message);
+    }
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Found) {
+        return terminate(
+            initial,
+            initial_event.reason,
+            initial_event.message,
+            initial_event.hit);
+    }
+
+    detail::KerrSeparatedInitialState initialized;
+    try {
+        initialized =
+            detail::initialize_kerr_separated_state(
+                *metric_,
+                initial,
+                config.kind,
+                config.potential_tolerance,
+                config.critical_derivative_tolerance,
+                config.initial_mino_step);
+    } catch (
+        const detail::KerrSeparatedCriticalInitialState&
+            error) {
+        return terminate(
+            initial,
+            TerminationReason::NearCriticalOrbit,
+            error.what());
+    } catch (const std::domain_error& error) {
+        return terminate(
+            initial,
+            TerminationReason::ConstraintViolation,
+            error.what());
+    }
+    constants = initialized.constants;
+
+    const double initial_mu =
+        initialized.state.values[detail::kMu];
+    if (1.0 - initial_mu * initial_mu <=
+            config.polar_axis_tolerance &&
+        constants.Lz != 0.0) {
+        return terminate(
+            initial,
+            TerminationReason::InvalidMetricPoint,
+            "near-axis nonzero-Lz Kerr BL motion is unsupported");
+    }
+
+    detail::KerrSeparatedState current =
+        initialized.state;
+    PhaseSpaceState current_public = initial;
+    double current_mino = 0.0;
+    double proposed_step = config.initial_mino_step;
+    const double integration_direction =
+        std::copysign(1.0, proposed_step);
+    std::size_t attempted_steps = 0;
+    std::size_t consecutive_rejections = 0;
+    RejectionKind last_rejection = RejectionKind::None;
+    diagnostics.min_radius_M = initial.x.v[1];
+
+    while (true) {
+        if (attempted_steps >= config.max_total_steps) {
+            return terminate(
+                current_public,
+                TerminationReason::MaxSteps,
+                "maximum total separated DOPRI5 attempts reached");
+        }
+
+        const double requested_magnitude = std::min(
+            std::fabs(proposed_step),
+            config.max_mino_step);
+        if (!std::isfinite(requested_magnitude) ||
+            requested_magnitude < config.min_mino_step) {
+            return terminate(
+                current_public,
+                rejection_reason(last_rejection),
+                last_rejection == RejectionKind::None
+                    ? "proposed Mino step is below the minimum"
+                    : rejection_message(
+                          last_rejection,
+                          "fell below the minimum"));
+        }
+        const double attempted_step =
+            integration_direction * requested_magnitude;
+        if (current_mino + attempted_step == current_mino) {
+            return terminate(
+                current_public,
+                TerminationReason::StepUnderflow,
+                "proposed step cannot advance Mino time");
+        }
+
+        ++attempted_steps;
+        detail::KerrSeparatedStepAttempt trial =
+            detail::attempt_kerr_separated_step(
+                *metric_,
+                constants,
+                current,
+                current_mino,
+                attempted_step,
+                config);
+        const auto& step = trial.step;
+        if (step.status !=
+                numerics::Dopri5StepResult<5>::Status::Completed ||
+            !step.accepted) {
+            ++diagnostics.rejected_steps;
+            ++consecutive_rejections;
+            if (trial.radial_forbidden ||
+                trial.polar_forbidden) {
+                last_rejection =
+                    RejectionKind::ForbiddenPotential;
+                proposed_step =
+                    attempted_step *
+                    config.dopri5.min_factor;
+            } else if (trial.invalid_metric_point) {
+                last_rejection =
+                    RejectionKind::InvalidMetricPoint;
+                proposed_step =
+                    attempted_step *
+                    config.dopri5.min_factor;
+            } else if (
+                trial.non_finite_stage ||
+                step.status !=
+                    numerics::Dopri5StepResult<5>::
+                        Status::Completed) {
+                last_rejection =
+                    RejectionKind::NonFiniteStage;
+                proposed_step =
+                    attempted_step *
+                    config.dopri5.min_factor;
+            } else {
+                last_rejection =
+                    RejectionKind::ErrorEstimate;
+                proposed_step = step.next_step;
+            }
+
+            if (consecutive_rejections >=
+                config.max_rejections_per_step) {
+                return terminate(
+                    current_public,
+                    rejection_reason(last_rejection),
+                    rejection_message(
+                        last_rejection,
+                        "reached the rejection limit"));
+            }
+            continue;
+        }
+        if (!step.dense_output.has_value()) {
+            return terminate(
+                current_public,
+                TerminationReason::NonFiniteState,
+                "accepted separated step has no dense output");
+        }
+
+        const detail::KerrSeparatedEventSelection selected_event =
+            detail::select_first_kerr_step_event(
+                *metric_,
+                constants,
+                current,
+                *step.dense_output,
+                active_events);
+        if (selected_event.status ==
+            detail::KerrSeparatedEventStatus::Failed) {
+            return terminate(
+                current_public,
+                TerminationReason::EventRootFailure,
+                selected_event.message);
+        }
+
+        detail::KerrSeparatedState accepted;
+        PhaseSpaceState accepted_public;
+        double accepted_mino;
+        std::optional<EventHit> public_hit;
+        if (selected_event.hit.has_value()) {
+            accepted =
+                selected_event.hit->separated_state;
+            accepted_public =
+                selected_event.hit->public_hit.state;
+            accepted_mino =
+                selected_event.hit->mino_parameter;
+            public_hit =
+                selected_event.hit->public_hit;
+        } else {
+            accepted = detail::KerrSeparatedState{
+                step.state,
+                current.radial_direction,
+                current.polar_direction,
+            };
+            accepted_mino =
+                current_mino + attempted_step;
+            try {
+                accepted_public =
+                    detail::reconstruct_kerr_phase_space(
+                        *metric_, constants, accepted);
+            } catch (const std::exception& error) {
+                return terminate(
+                    current_public,
+                    TerminationReason::NonFiniteState,
+                    std::string(
+                        "accepted separated state failed: ") +
+                        error.what());
+            }
+        }
+
+        const double accepted_step_magnitude =
+            std::fabs(accepted_mino - current_mino);
+        if (public_hit.has_value() &&
+            accepted_step_magnitude == 0.0) {
+            return terminate(
+                accepted_public,
+                selected_event.reason,
+                "geodesic event is at the current state",
+                public_hit);
+        }
+        if (!finite_phase_space(accepted_public) ||
+            !metric_->valid_point(accepted_public.x)) {
+            return terminate(
+                current_public,
+                TerminationReason::InvalidMetricPoint,
+                "accepted separated state is outside Kerr BL");
+        }
+
+        ++diagnostics.accepted_steps;
+        diagnostics.min_mino_step =
+            std::isnan(diagnostics.min_mino_step)
+                ? accepted_step_magnitude
+                : std::min(
+                      diagnostics.min_mino_step,
+                      accepted_step_magnitude);
+        diagnostics.max_mino_step =
+            std::isnan(diagnostics.max_mino_step)
+                ? accepted_step_magnitude
+                : std::max(
+                      diagnostics.max_mino_step,
+                      accepted_step_magnitude);
+        diagnostics.min_radius_M = std::min(
+            diagnostics.min_radius_M,
+            accepted_public.x.v[1]);
+        diagnostics.azimuthal_advance =
+            accepted_public.x.v[3] - initial.x.v[3];
+        diagnostics.winding =
+            diagnostics.azimuthal_advance /
+            (2.0 *
+             3.141592653589793238462643383279502884);
+
+        current = accepted;
+        current_public = accepted_public;
+        current_mino = accepted_mino;
+
+        if (public_hit.has_value()) {
+            return terminate(
+                current_public,
+                selected_event.reason,
+                selected_event.message,
+                public_hit);
+        }
+
+        consecutive_rejections = 0;
+        last_rejection = RejectionKind::None;
+        proposed_step = step.next_step;
+    }
+}
+
+} // namespace solar::relativity
