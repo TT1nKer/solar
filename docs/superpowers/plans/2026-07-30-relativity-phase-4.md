@@ -65,7 +65,7 @@ Large existing files intentionally deferred: separated-geodesic sources, rendere
 - Produces: appended `GeodesicIntegrationConfig::stationary_energy_evaluator` and `GeodesicIntegrationConfig::axial_angular_momentum_evaluator`.
 - Preserves: empty evaluators select `-state.p.v[0]` and `state.p.v[3]`.
 
-- [ ] **Step 1: Write callback behavior tests**
+- [x] **Step 1: Write callback behavior tests**
 
 Create a flat-metric integration fixture whose custom energy is
 `state.x.v[1] + state.p.v[0]` and custom Lz is
@@ -91,7 +91,7 @@ defaults. Add separate integrations where each callback throws
 Finally run with empty evaluators and require existing energy/Lz diagnostics
 to retain their BL values.
 
-- [ ] **Step 2: Run the focused test and confirm the red state**
+- [x] **Step 2: Run the focused test and confirm the red state**
 
 Run:
 
@@ -102,7 +102,7 @@ make -j4 tests/relativity/test_geodesic_invariant_callbacks
 Expected: compilation fails because the two configuration fields do not
 exist.
 
-- [ ] **Step 3: Add evaluator fields and one shared checked-evaluation path**
+- [x] **Step 3: Add evaluator fields and one shared checked-evaluation path**
 
 Append to `GeodesicIntegrationConfig`:
 
@@ -129,7 +129,7 @@ When the callback is empty, evaluate the existing BL formula directly.
 Use the same checked method for Carter so all callback failures have the same
 termination semantics.
 
-- [ ] **Step 4: Run focused and existing invariant tests**
+- [x] **Step 4: Run focused and existing invariant tests**
 
 Run:
 
@@ -144,7 +144,7 @@ make -j4 tests/relativity/test_geodesic_invariant_callbacks \
 
 Expected: all executables report zero failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/geodesic_integrator.h \
@@ -154,7 +154,7 @@ git add include/solar/relativity/geodesic_integrator.h \
 git commit -m "feat(relativity): support chart-aware invariant monitors"
 ```
 
-### Task 2: Stable Cartesian Kerr–Schild metric
+### Task 2: Stable Cartesian Kerr–Schild metric and production derivatives
 
 **Files:**
 - Create: `include/solar/relativity/kerr_schild_metric.h`
@@ -202,6 +202,12 @@ check_near("axial angular momentum",
            0.0);
 ```
 
+Also require the Schwarzschild radius gradient to equal
+`(x/r,y/r,z/r)`, every inverse-metric derivative to be finite, symmetric,
+and its stationary time derivative to be exactly zero. These basic
+behavior assertions prevent an incomplete concrete `Metric` implementation;
+Task 3 supplies independent precision validation.
+
 - [ ] **Step 2: Run the focused test and confirm the red state**
 
 Run:
@@ -236,13 +242,27 @@ g_inv[mu][nu] = eta[mu][nu] - 2*H*l_up[mu]*l_up[nu];
 Keep branch selection based on the scalar value for both `double` and
 `Dual4`.
 
-- [ ] **Step 4: Implement public validation and accessors**
+- [ ] **Step 4: Implement public validation, accessors, and derivatives**
 
 Validate constructor parameters once. `valid_point` checks finite
 coordinates, stable `r > 64*epsilon*M`, nonzero finite denominators, and
 finite metric values without excluding the axis, horizon, or positive-radius
 interior. Metric methods throw `std::domain_error` when invalid. Compute
 `a=chi*M` and `r_\pm=M±sqrt(M^2-a^2)`.
+
+Implement the prompt's analytic radius gradient:
+
+```text
+D = 2r^2-rho^2+a^2
+dr/dx = xr/D
+dr/dy = yr/D
+dr/dz = z(r^2+a^2)/(rD)
+```
+
+For inverse-metric derivatives, seed all four input coordinates as `Dual4`,
+evaluate the scalar-generic inverse once, and copy each derivative component.
+This keeps `KerrSchildCartesianMetric` fully executable at the end of Task 2;
+no placeholder exception or zero derivative is permitted.
 
 - [ ] **Step 5: Run focused and baseline metric tests**
 
@@ -270,16 +290,17 @@ git add include/solar/relativity/kerr_schild_metric.h \
 git commit -m "feat(relativity): add Cartesian Kerr-Schild metric"
 ```
 
-### Task 3: Kerr–Schild analytic and AD derivatives
+### Task 3: Independent Kerr–Schild derivative validation
 
 **Files:**
 - Create: `tests/relativity/test_kerr_schild_derivatives.cpp`
 - Modify: `src/relativity/kerr_schild_metric.cpp`
 
 **Interfaces:**
-- Consumes: scalar-generic inverse metric from Task 2.
-- Produces: `radial_coordinate_gradient` and
-  `Metric::contravariant_derivatives` for Cartesian KS.
+- Consumes: the production analytic gradient and scalar-generic AD inverse
+  derivatives from Task 2.
+- Produces: independent precision and boundary evidence; production changes
+  occur only when a measured defect identifies its owning expression.
 
 - [ ] **Step 1: Write independent derivative tests**
 
@@ -305,7 +326,7 @@ with `h=cbrt(epsilon)*max(M,abs(x_alpha),1)` and require scaled relative
 error `<3e-8`. Require time derivatives to be exactly zero and invalid
 points to throw.
 
-- [ ] **Step 2: Run the derivative test and confirm the red state**
+- [ ] **Step 2: Run the independent derivative acceptance test**
 
 Run:
 
@@ -313,17 +334,18 @@ Run:
 make -j4 tests/relativity/test_kerr_schild_derivatives
 ```
 
-Expected: link or assertion failure because derivative methods are not yet
-implemented.
+Expected: the new independent test either passes every gate immediately or
+reports the first measured component/fixture mismatch. A first-run pass is
+valid because Task 2 already test-drove the complete concrete metric.
 
-- [ ] **Step 3: Implement the two derivative paths**
+- [ ] **Step 3: Correct only a measured derivative defect**
 
-Implement the analytic radius gradient exactly as specified above, checking
-`D`, `r`, and every returned component for finiteness. For metric derivatives,
-construct four seeded `Dual4` coordinates, evaluate the scalar-generic
-contravariant metric once, and copy `value.derivative[alpha]` into
-`result[alpha][mu][nu]`. Preserve exact symmetry by assigning paired
-components from the same expression.
+If a gate fails, use the printed coordinate, tensor indices, analytic value,
+AD value, and finite-difference value to locate the defect in stable radius,
+`H`, the null one-form, inverse assembly, or analytic `D`. Correct that
+single owning expression. Preserve exact tensor symmetry by assigning paired
+components from the same scalar expression; do not relax a gate or introduce
+a finite-difference production fallback.
 
 - [ ] **Step 4: Run derivative, Hamiltonian, and geodesic baseline tests**
 
