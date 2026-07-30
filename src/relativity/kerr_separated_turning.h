@@ -39,6 +39,9 @@ inline constexpr std::size_t kPhaseMu = 3;
 inline constexpr std::size_t kPhasePolarVelocity = 4;
 inline constexpr std::size_t kPhaseAzimuth = 5;
 inline constexpr std::size_t kPhaseAffine = 6;
+// At a simple root, v^2 - V subtracts two roundoff-scale values.
+// This remains bounded by the CPU geodesic constraint gate.
+inline constexpr double kPhasePotentialDriftTolerance = 1.0e-10;
 
 struct TurningPhaseCrossing {
     TurningStatus status;

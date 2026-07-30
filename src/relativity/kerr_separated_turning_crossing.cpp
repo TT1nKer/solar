@@ -102,8 +102,11 @@ locate_kerr_turning_phase_crossing(
             "turning phase velocity is non-finite",
         };
     }
-    if (left_velocity != 0.0 &&
-        right_velocity != 0.0 &&
+    if (left_velocity == 0.0) {
+        // A root at the step start was counted by the preceding step.
+        return std::nullopt;
+    }
+    if (right_velocity != 0.0 &&
         std::signbit(left_velocity) ==
             std::signbit(right_velocity)) {
         return std::nullopt;
@@ -178,7 +181,7 @@ locate_kerr_turning_phase_crossing(
         normalized_potential >
             std::max(
                 normalized_potential_tolerance,
-                1.0e-10)) {
+                kPhasePotentialDriftTolerance)) {
         return TurningPhaseCrossing{
             TurningStatus::Failed,
             coordinate,
