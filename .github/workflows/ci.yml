@@ -22,6 +22,9 @@ jobs:
       - name: Run test suite
         run: make test
 
+      - name: Verify external CMake consumer
+        run: make test-external-consumer
+
       - name: Verify CLI starts
         run: ./solar 2>&1 | head -5
 
