@@ -5,6 +5,7 @@
 #include "solar/relativity/spacetime_algebra.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -73,12 +74,14 @@ int main() {
         photon.measured_frequency,
         1.0,
         1.0e-15);
-    check(
-        "photon null constraint",
+    const double photon_constraint =
         hamiltonian_constraint_error(
             metric,
             *photon.state,
-            GeodesicKind::Null) < 1.0e-14);
+            GeodesicKind::Null);
+    check(
+        "photon null constraint",
+        photon_constraint < 1.0e-14);
 
     const Contravariant4 photon_tangent = raise_index(
         metric.contravariant(position),
@@ -129,12 +132,14 @@ int main() {
         hamiltonian(metric, *timelike.state),
         -0.5,
         2.0e-15);
-    check(
-        "timelike normalized constraint",
+    const double timelike_constraint =
         hamiltonian_constraint_error(
             metric,
             *timelike.state,
-            GeodesicKind::TimelikeUnitMass) < 1.0e-14);
+            GeodesicKind::TimelikeUnitMass);
+    check(
+        "timelike normalized constraint",
+        timelike_constraint < 1.0e-14);
 
     check(
         "zero photon direction rejected",
@@ -222,6 +227,20 @@ int main() {
         1.0,
         1.0e-15);
 
+    std::cout << std::setprecision(17)
+              << "  photon_frequency="
+              << photon.measured_frequency
+              << " photon_constraint="
+              << photon_constraint
+              << " timelike_frequency="
+              << timelike.measured_frequency
+              << " timelike_constraint="
+              << timelike_constraint
+              << " backward_frequency="
+              << observer_measured_frequency(
+                     backward.final_state.p,
+                     observer.frame->tetrad.basis[0])
+              << "\n";
     std::cout << "\n=== Results: " << passed
               << " passed, " << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

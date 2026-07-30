@@ -2,6 +2,7 @@
 #include "solar/relativity/spacetime_algebra.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -246,6 +247,31 @@ int main() {
             OrbitSense::Prograde).error ==
             ObserverError::CircularWorldlineNotTimelike);
 
+    std::cout << std::setprecision(17)
+              << "  prograde_isco="
+              << kerr_isco_radius(
+                     positive_spin, OrbitSense::Prograde)
+              << " retrograde_isco="
+              << kerr_isco_radius(
+                     positive_spin, OrbitSense::Retrograde)
+              << " prograde_photon="
+              << kerr_equatorial_photon_radius(
+                     positive_spin, OrbitSense::Prograde)
+              << " retrograde_photon="
+              << kerr_equatorial_photon_radius(
+                     positive_spin, OrbitSense::Retrograde)
+              << " circular_energy_error="
+              << std::fabs(
+                     -lowered_velocity.v[0] -
+                     circular_properties.orbit->specific_energy)
+              << " circular_lz_error="
+              << std::fabs(
+                     lowered_velocity.v[3] -
+                     circular_properties.orbit->specific_lz)
+              << " circular_tetrad_error="
+              << tetrad_orthonormality_error(
+                     positive_spin, *circular_observer.frame)
+              << "\n";
     std::cout << "\n=== Results: " << passed
               << " passed, " << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

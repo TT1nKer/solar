@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -56,10 +57,12 @@ int main() {
     check(
         "successful observer has no error",
         stationary.error == ObserverError::None);
+    const double static_tetrad_error =
+        tetrad_orthonormality_error(
+            minkowski, *stationary.frame);
     check_near(
         "static tetrad orthonormal",
-        tetrad_orthonormality_error(
-            minkowski, *stationary.frame),
+        static_tetrad_error,
         0.0,
         1.0e-15);
     check_near(
@@ -102,10 +105,12 @@ int main() {
             boosted_velocity,
             attitude);
     check("boosted look-at observer exists", bool(look_at));
+    const double look_at_tetrad_error =
+        tetrad_orthonormality_error(
+            minkowski, *look_at.frame);
     check(
         "boosted tetrad meets gate",
-        tetrad_orthonormality_error(
-            minkowski, *look_at.frame) < 2.0e-15);
+        look_at_tetrad_error < 2.0e-15);
     check(
         "look direction is preserved",
         metric_inner_product(
@@ -150,10 +155,12 @@ int main() {
             boosted_velocity,
             coordinate_seeds);
     check("arbitrary boosted observer exists", bool(arbitrary));
+    const double arbitrary_tetrad_error =
+        tetrad_orthonormality_error(
+            minkowski, *arbitrary.frame);
     check(
         "arbitrary boosted observer meets gate",
-        tetrad_orthonormality_error(
-            minkowski, *arbitrary.frame) < 2.0e-15);
+        arbitrary_tetrad_error < 2.0e-15);
 
     const Contravariant4 non_unit_velocity{
         Vec4{{1.0, 0.5, 0.0, 0.0}}};
@@ -310,6 +317,15 @@ int main() {
             ordinary_kerr, axis_point).error ==
             ObserverError::InvalidMetricPoint);
 
+    std::cout << std::setprecision(17)
+              << "  static_tetrad_error="
+              << static_tetrad_error
+              << " look_at_tetrad_error="
+              << look_at_tetrad_error
+              << " arbitrary_tetrad_error="
+              << arbitrary_tetrad_error
+              << " zamo_tetrad_error="
+              << zamo_error << "\n";
     std::cout << "\n=== Results: " << passed
               << " passed, " << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;
