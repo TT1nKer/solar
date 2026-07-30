@@ -1,18 +1,21 @@
 # Solar Relativity Status
 
-CURRENT_PHASE: 1
+CURRENT_PHASE: 2
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: 1bf7442c141e5440642af18677dc8680f96bfc9d
+LAST_VERIFIED_COMMIT: 8a6a2533972685f31dea8eae5f361f948546f285
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0
 LAST_VERIFIED_COMMANDS:
 - `make clean`
 - `make`
 - `make test`
-- all 15 `tests/relativity/test_*` executables
-- AddressSanitizer and UndefinedBehaviorSanitizer build plus all relativity tests
-- DOPRI, Hamiltonian, RMS, dense-output, and invalid-domain mutation checks
-- independent Kerr inverse-domain, Carter-Q, Schwarzschild convergence, and
-  high-precision bending probes
+- all 22 `tests/relativity/test_*` executables
+- AddressSanitizer and UndefinedBehaviorSanitizer build plus all 22 relativity
+  tests and `tests/test_integrator`
+- DOPRI, Hamiltonian, RMS, dense-output, invalid-domain, observer, local-state,
+  Carter, special-orbit, and analytic/numerical-shadow checks
+- horizontal-screen-sign, Bardeen-`xi`-sign, and
+  invalid-metric-as-capture mutation checks
+- independent 80-decimal Kerr special-radius and Bardeen-edge probe
 - `git diff --check`
 
 ACTUALLY_COMPLETED:
@@ -27,15 +30,36 @@ ACTUALLY_COMPLETED:
 - Rejects DOPRI5 steps that cannot advance the floating-point independent variable, so canonical state cannot advance while affine remains frozen.
 - Validates geodesic/event enums and every event contract before trajectory work instead of silently choosing fallback physics or hiding malformed input behind a later metric failure.
 - Restricts Kerr BL `valid_point()` to the v3 `1e-10` near-horizon inverse-identity precision gate; ill-conditioned exterior points now terminate explicitly and remain distinct from horizon capture.
-- Made E and Lz monitoring opt-in and left unavailable Carter diagnostics as NaN.
+- Kept E, Lz, and Carter monitoring opt-in; the generic integrator receives
+  Carter through an explicit invariant evaluator and reports relative and
+  absolute drift without depending on Kerr.
 - Preserved the existing dynamic-vector generic integrator output and the specialized N-body interface.
 - Validated Minkowski null/timelike lines, reversal, Schwarzschild radial null motion, photon sphere, weak bending, and ordinary Kerr E/Lz behavior.
-- Passed 403/403 relativity assertions and 67/67 fixture-independent legacy assertions in release mode.
-- Passed all 403 relativity assertions plus the 11-assertion legacy DOPRI adapter test under AddressSanitizer and UndefinedBehaviorSanitizer.
+- Added metric contraction, index raising/lowering, and covector/vector pairing
+  primitives with fixed variance.
+- Added static, arbitrary, look-at, ZAMO, and equatorial circular observers
+  with Lorentzian Gram–Schmidt, right-handed tetrads, full 16-component frame
+  validation, and explicit nonexistence/failure outcomes.
+- Added local future-directed photon and subluminal timelike initialization,
+  observer-frequency measurement, photon normalization, and Hamiltonian gates.
+- Added Kerr `E`, `Lz`, and Carter evaluation plus generic opt-in Carter drift
+  monitoring and explicit callback failure semantics.
+- Added analytic Schwarzschild/Kerr ISCO, equatorial photon, marginally bound,
+  and circular timelike quantities with spin-relative orbit sense.
+- Added the asymptotic Bardeen critical curve, a stable small-spin
+  Schwarzschild branch, and finite-domain filtering without fabricated roots.
+- Added an independent distant-ZAMO CPU backward-ray benchmark. It keeps
+  momentum future-directed, uses negative affine integration, distinguishes BL
+  chart failure from capture, and recovers both horizontal Kerr shadow edges.
+- Passed 1880/1880 relativity assertions across 22 executables and 67/67
+  fixture-independent legacy assertions in release mode.
+- Passed all 1880 relativity assertions plus the 11-assertion legacy DOPRI
+  adapter test under AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:
-- Observer/tetrad construction, local photon/timelike initialization, measured-frequency normalization, or general future-direction classification.
-- Carter constant, separated Kerr/Mino-time solver, or long-time structure-preserving timelike integration.
+- Separated Kerr radial/polar potentials, Mino-time solver, fundamental
+  frequencies, turning-point handling, or long-time structure-preserving
+  timelike integration.
 - Kerr–Schild coordinates, reliable physical horizon crossing, interior evolution, or singularity treatment.
 - Disk/material models, radiative transfer, reference renderer, image/movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
 - DE440's eight external-data assertions on this machine.
@@ -54,12 +78,22 @@ MOST_LIKELY_BUGS:
   exterior and can vary slightly with floating-point platform; callers must
   treat rejection as chart/numerical invalidity, not capture.
 - Long bound timelike trajectories can accumulate secular error because Phase 1 has no structure-preserving integrator.
-- Caller-supplied coordinate states can have an unintended local direction until Phase 2 tetrad initialization exists.
+- Near-degenerate arbitrary-observer seeds can cross the fixed numerical
+  rejection threshold differently on other floating-point platforms.
 - The universal tolerance factory follows v3 component defaults but is not
   chart-aware; non-unit mass scales with angular BL coordinates need a
   dedicated convergence sweep before scientific use.
 - Near-extremal, near-margin, extreme-momentum, and long-duration cases lack a multiprecision reference sweep.
-- E/Lz monitoring is caller-enabled and symmetry-dependent; Carter is intentionally unavailable.
+- Carter monitoring is callback-based and the validated generic trajectory is
+  short; long bound-orbit secular drift is not characterized.
+- The analytic off-equatorial Bardeen curve samples the spherical-photon
+  interval rather than solving visible-branch endpoint roots adaptively, so
+  coarse sample counts can under-resolve the tips.
+- The CPU shadow benchmark checks only two equatorial horizontal edges at
+  `r=1000M`, `chi=0.5`; it does not validate a full 2D image or near-extremal
+  convergence.
+- Circular-orbit formulas are double precision and have not received a dense
+  near-extremal sweep against an independent package.
 - Only Apple Clang 16 on macOS arm64 was verified locally.
 - Missing default DE440 data remains a visible skip.
 
@@ -71,8 +105,26 @@ FASTEST_WAY_TO_FALSIFY:
 - `./tests/relativity/test_geodesics`: analytic Minkowski lines, limits, first event, reversal, enum validation, and affine-resolution underflow.
 - `./tests/relativity/test_kerr_bl`: accepted near-horizon BL points must satisfy the `1e-10` inverse-identity gate.
 - `./tests/relativity/test_geodesics_schwarzschild`: radial null, photon sphere, weak bending, and `1e-10` constraint gate.
-- `./tests/relativity/test_geodesics_kerr`: ordinary Kerr constraint, exact monitored E/Lz, and unavailable Carter.
+- `./tests/relativity/test_observers`: static/arbitrary/look-at/ZAMO
+  normalization, handedness, round trips, ergosphere and invalid-domain
+  failures.
+- `./tests/relativity/test_local_initialization`: photon/timelike constraints,
+  observer frequency, future direction, negative-affine semantics, and invalid
+  local inputs.
+- `./tests/relativity/test_kerr_constants`: literal null/timelike Carter
+  values and every evaluator failure boundary.
+- `./tests/relativity/test_kerr_orbits`: Schwarzschild/Kerr special radii,
+  stability/existence, signed spin, and lowered circular-observer invariants.
+- `./tests/relativity/test_kerr_shadow`: Schwarzschild limit, Kerr endpoints,
+  reflection, mass scaling, small-spin stability, and invalid inputs.
+- `./tests/relativity/test_kerr_shadow_raytrace`: future-directed
+  negative-affine rays, explicit capture/escape classification, both Bardeen
+  edge comparisons, and Hamiltonian/Carter gates.
+- `./tests/relativity/test_geodesics_kerr`: ordinary Kerr constraint, exact
+  monitored E/Lz, Carter drift, denominator semantics, and callback failures.
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Phase 2 only: implement observer and tetrad construction, local initialization, frequency normalization, and round-trip validation. Do not enter Phase 3.
+- Phase 3 only: implement separated Kerr radial/polar potentials, turning
+  points, and Mino-time validation. Do not enter Phase 4 Kerr–Schild, matter,
+  transfer, renderer, GPU, or UI work before the Phase 3 gate passes.

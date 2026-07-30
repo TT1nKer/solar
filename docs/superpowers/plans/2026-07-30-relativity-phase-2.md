@@ -55,7 +55,7 @@ Hamiltonian geodesic integrator, and standalone executable tests.
 - Produces: `metric_inner_product`, `covector_vector_pairing`, `lower_index`,
   and `raise_index`.
 
-- [ ] **Step 1: Write the failing real-behavior test**
+- [x] **Step 1: Write the failing real-behavior test**
 
 Create `tests/relativity/test_spacetime_algebra.cpp` with a local pass/fail
 counter. Use the literal Minkowski matrix and vectors:
@@ -90,7 +90,7 @@ finite contraction.
 Mutation target: swapping covariant indices, omitting the time sign, or pairing
 two covectors must fail a literal assertion.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_spacetime_algebra
@@ -99,13 +99,13 @@ make tests/relativity/test_spacetime_algebra
 Expected: compilation fails because
 `solar/relativity/spacetime_algebra.h` does not exist.
 
-- [ ] **Step 3: Implement the minimal algebra**
+- [x] **Step 3: Implement the minimal algebra**
 
 Implement direct four-component sums. `lower_index` uses
 `p_mu=g_mu,nu v^nu`; `raise_index` uses
 `v^mu=g^mu,nu p_nu`. Do not add a tensor class or cache metric evaluations.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 ```bash
 make tests/relativity/test_spacetime_algebra
@@ -114,7 +114,7 @@ make tests/relativity/test_spacetime_algebra
 
 Expected: all assertions pass with no compiler warning.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/spacetime_algebra.h \
@@ -134,7 +134,7 @@ git commit -m "feat: add spacetime algebra primitives"
 - Produces: `Tetrad`, `ObserverFrame`, `ObserverError`, `ObserverResult`,
   `LookAtAttitude`, tetrad transforms, arbitrary/static/look-at constructors.
 
-- [ ] **Step 1: Add failing observer-contract tests**
+- [x] **Step 1: Add failing observer-contract tests**
 
 Create `tests/relativity/test_observers.cpp`. For Minkowski:
 
@@ -193,7 +193,7 @@ be valid and `make_static_observer` to return exactly
 Mutation target: the wrong Lorentzian projection sign, Euclidean
 Gram-Schmidt, missing ergosphere test, or omitted handedness flip must fail.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_observers
@@ -201,7 +201,7 @@ make tests/relativity/test_observers
 
 Expected: compilation fails because `observer.h` is absent.
 
-- [ ] **Step 3: Implement observer contracts and Lorentzian Gram-Schmidt**
+- [x] **Step 3: Implement observer contracts and Lorentzian Gram-Schmidt**
 
 Implement the exact types from the design. Use:
 
@@ -223,7 +223,7 @@ above `1e-10`.
 Static observer uses `u^t=1/sqrt(-g_tt)` and coordinate `r`, `theta`, `phi`
 seeds. Check `g_tt<0` before the square root.
 
-- [ ] **Step 4: Verify GREEN and focused regressions**
+- [x] **Step 4: Verify GREEN and focused regressions**
 
 ```bash
 make tests/relativity/test_observers tests/relativity/test_metrics
@@ -233,7 +233,7 @@ make tests/relativity/test_observers tests/relativity/test_metrics
 
 Expected: observer and existing metric tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/observer.h \
@@ -253,7 +253,7 @@ git commit -m "feat: add observer tetrad construction"
 - Consumes: `KerrBoyerLindquistMetric` and Task 2 observer contracts.
 - Produces: `make_zamo_observer`.
 
-- [ ] **Step 1: Add failing ZAMO tests**
+- [x] **Step 1: Add failing ZAMO tests**
 
 For `M=1`, `chi=0.7`, `x=(0,8,1.1,0.3)`:
 
@@ -280,7 +280,7 @@ within `3e-6`. Require invalid BL points and the polar axis to return
 Mutation target: omitting `omega/alpha`, using `omega` with the wrong sign, or
 using `sqrt(Sigma/A)*sin(theta)` instead of division must fail.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_observers
@@ -288,14 +288,14 @@ make tests/relativity/test_observers
 
 Expected: compilation fails because `make_zamo_observer` is undeclared.
 
-- [ ] **Step 3: Implement the explicit v3 ZAMO basis**
+- [x] **Step 3: Implement the explicit v3 ZAMO basis**
 
 Compute `Sigma`, `Delta`, `A`, `alpha`, `omega`, and the four legs from v3.
 Reject every non-finite/non-positive square-root input. Reuse final tetrad
 validation from Task 2; do not route the explicit ZAMO through generic
 Gram-Schmidt.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 ```bash
 make tests/relativity/test_observers
@@ -304,7 +304,7 @@ make tests/relativity/test_observers
 
 Expected: all observer tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/observer.h \
@@ -326,7 +326,7 @@ git commit -m "feat: add Kerr ZAMO observer"
   `observer_measured_frequency`, `initialize_local_photon`, and
   `initialize_local_timelike`.
 
-- [ ] **Step 1: Add failing local-initialization tests**
+- [x] **Step 1: Add failing local-initialization tests**
 
 Use a Minkowski static observer. For photon direction `(2,0,0)`:
 
@@ -369,7 +369,7 @@ Mutation target: forgetting to normalize direction/frequency, lowering with
 the inverse metric, using `+p.u`, reversing photon momentum for backward
 tracing, or omitting gamma must fail.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_local_initialization
@@ -377,7 +377,7 @@ make tests/relativity/test_local_initialization
 
 Expected: compilation fails because `local_initialization.h` is absent.
 
-- [ ] **Step 3: Implement minimal initialization**
+- [x] **Step 3: Implement minimal initialization**
 
 Form local photon `(1,n/|n|)` and timelike
 `gamma(1,v)`. Expand through the tetrad, lower with `g_mu,nu`, and evaluate
@@ -385,7 +385,7 @@ frequency with the covector-vector pairing. Scale only photon momentum by
 `1/nu`. Validate the observer tetrad and Hamiltonian constraint before
 returning success.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 ```bash
 make tests/relativity/test_local_initialization \
@@ -396,7 +396,7 @@ make tests/relativity/test_local_initialization \
 
 Expected: local and existing geodesic assertions pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/local_initialization.h \
@@ -423,7 +423,7 @@ git commit -m "feat: initialize local physical states"
 - Produces: `KerrConstants`, `evaluate_kerr_constants`, optional
   `carter_evaluator`, relative and absolute Carter diagnostics.
 
-- [ ] **Step 1: Add failing literal Kerr-constant tests**
+- [x] **Step 1: Add failing literal Kerr-constant tests**
 
 For `M=1`, `chi=0.5`, `theta=pi/3`,
 `p_t=-1`, `p_theta=3`, `p_phi=2`, assert:
@@ -455,7 +455,7 @@ non-finite state, invalid metric point, and the polar axis.
 Mutation target: using contravariant momentum, omitting `cos^2`, wrong mass
 term sign, or using `Lz^2*sin^2` must fail.
 
-- [ ] **Step 2: Run and verify RED for the constants API**
+- [x] **Step 2: Run and verify RED for the constants API**
 
 ```bash
 make tests/relativity/test_kerr_constants
@@ -463,7 +463,7 @@ make tests/relativity/test_kerr_constants
 
 Expected: compilation fails because `kerr_constants.h` is absent.
 
-- [ ] **Step 3: Implement constants and verify focused GREEN**
+- [x] **Step 3: Implement constants and verify focused GREEN**
 
 Implement the exact v3 equation with finite/domain validation:
 
@@ -474,7 +474,7 @@ make tests/relativity/test_kerr_constants
 
 Expected: literal constant tests pass.
 
-- [ ] **Step 4: Add failing geodesic diagnostic tests**
+- [x] **Step 4: Add failing geodesic diagnostic tests**
 
 Append `max_carter_abs_error` to `IntegrationDiagnostics`; existing default
 diagnostic tests must require both Carter fields to be NaN when no evaluator
@@ -511,7 +511,7 @@ be `2e-9` within integration roundoff. This catches accidental division by
 the small initial value. Require a NaN-returning or throwing evaluator to
 terminate explicitly without accepting a fabricated diagnostic.
 
-- [ ] **Step 5: Run and verify RED for monitoring**
+- [x] **Step 5: Run and verify RED for monitoring**
 
 ```bash
 make tests/relativity/test_geodesic_events \
@@ -520,7 +520,7 @@ make tests/relativity/test_geodesic_events \
 
 Expected: compilation fails because the absolute field/evaluator is absent.
 
-- [ ] **Step 6: Implement the generic evaluator path**
+- [x] **Step 6: Implement the generic evaluator path**
 
 Add:
 
@@ -542,7 +542,7 @@ const double normalized =
 Apply the same denominator to E and Lz. Catch evaluator exceptions and reject
 non-finite output with an explicit diagnostic message.
 
-- [ ] **Step 7: Verify GREEN and Phase 1 compatibility**
+- [x] **Step 7: Verify GREEN and Phase 1 compatibility**
 
 ```bash
 make tests/relativity/test_kerr_constants \
@@ -557,7 +557,7 @@ make tests/relativity/test_kerr_constants \
 
 Expected: new Carter behavior and all existing geodesic behavior pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_constants.h \
@@ -585,7 +585,7 @@ git commit -m "feat: monitor Kerr Carter invariant"
   `CircularTimelikeOrbit`, `CircularOrbitResult`, analytic radii/properties,
   and `make_equatorial_circular_observer`.
 
-- [ ] **Step 1: Add failing special-radius tests**
+- [x] **Step 1: Add failing special-radius tests**
 
 For Schwarzschild limit `M=2`, require:
 
@@ -612,7 +612,7 @@ meaning relative to spin. Reject unknown sense.
 Mutation target: signed-spin radii, swapped prograde/retrograde square-root
 branch, or a missing mass scale must fail literal fixtures.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_kerr_orbits
@@ -620,13 +620,13 @@ make tests/relativity/test_kerr_orbits
 
 Expected: compilation fails because `kerr_orbits.h` is absent.
 
-- [ ] **Step 3: Implement special radii**
+- [x] **Step 3: Implement special radii**
 
 Use `abs(chi)` in relative-spin radius formulas and multiply all
 dimensionless radii by `M`. Use `std::cbrt` for the ISCO cube roots. Validate
 finite outputs and sense.
 
-- [ ] **Step 4: Add failing circular-orbit and observer tests**
+- [x] **Step 4: Add failing circular-orbit and observer tests**
 
 At Schwarzschild `M=1`, `r=6`:
 
@@ -661,7 +661,7 @@ timelike circular orbit using
 Mutation target: conflating `r<ISCO` with nonexistence, the wrong coordinate
 rotation sign, or mismatched analytic/lowered E/Lz must fail.
 
-- [ ] **Step 5: Implement circular quantities and observer**
+- [x] **Step 5: Implement circular quantities and observer**
 
 Use dimensionless `x=r/M` and coordinate rotation sign `s`:
 
@@ -677,7 +677,7 @@ Require positive finite normalization. Construct
 `u=(u^t,0,0,Omega*u^t)` from the metric and route its spatial basis through
 the generic observer constructor.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 ```bash
 make tests/relativity/test_kerr_orbits \
@@ -688,7 +688,7 @@ make tests/relativity/test_kerr_orbits \
 
 Expected: all orbit and observer tests pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_orbits.h \
@@ -708,7 +708,7 @@ git commit -m "feat: add Kerr circular orbit observers"
 - Consumes: Kerr special photon radii.
 - Produces: `ShadowCriticalPoint` and `bardeen_shadow_curve`.
 
-- [ ] **Step 1: Add failing analytic-curve tests**
+- [x] **Step 1: Add failing analytic-curve tests**
 
 For `M=2`, `chi=0`, require every point to satisfy:
 
@@ -740,7 +740,7 @@ limit. Reject inclination `0`, `pi`, NaN, and `samples_per_branch<2`.
 Mutation target: wrong xi denominator sign, omitted cotangent term, accepting
 a truly negative beta radicand, or direct division by tiny spin must fail.
 
-- [ ] **Step 2: Run and verify RED**
+- [x] **Step 2: Run and verify RED**
 
 ```bash
 make tests/relativity/test_kerr_shadow
@@ -748,7 +748,7 @@ make tests/relativity/test_kerr_shadow
 
 Expected: compilation fails because `kerr_shadow.h` is absent.
 
-- [ ] **Step 3: Implement the analytic curve**
+- [x] **Step 3: Implement the analytic curve**
 
 For rotating Kerr, sample the closed interval between the relative-spin
 prograde and retrograde photon radii. Compute `xi`, `eta`, and the beta
@@ -764,7 +764,7 @@ radicand >= -128.0L *
 Return upper branch in increasing photon radius and lower branch in reverse,
 without duplicating zero-beta endpoints.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 ```bash
 make tests/relativity/test_kerr_shadow
@@ -773,7 +773,7 @@ make tests/relativity/test_kerr_shadow
 
 Expected: all analytic curve assertions pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_shadow.h \
@@ -797,7 +797,7 @@ git commit -m "feat: add analytic Kerr shadow curve"
 - Produces: independent numerical/analytic shadow evidence and Phase 2
   validation reports.
 
-- [ ] **Step 1: Add the numerical shadow acceptance benchmark**
+- [x] **Step 1: Add the numerical shadow acceptance benchmark**
 
 In `test_kerr_shadow.cpp`, use `M=1`, `chi=0.5`, equatorial observer radius
 `r_obs=1000`. Build a ZAMO. For horizontal Bardeen screen coordinate
@@ -862,7 +862,7 @@ Mutation target: past-directed camera momentum, wrong screen horizontal sign,
 mapping `InvalidMetricPoint` to capture, or a wrong analytic boundary must
 fail.
 
-- [ ] **Step 2: Run the independent acceptance benchmark**
+- [x] **Step 2: Run the independent acceptance benchmark**
 
 ```bash
 make tests/relativity/test_kerr_shadow
@@ -875,14 +875,14 @@ pass on its first run. If it fails, record the actual mismatch and add a
 narrow failing regression before changing production code. A timeout or
 non-event outcome is a failure, not a skip.
 
-- [ ] **Step 3: Make only benchmark-supported corrections**
+- [x] **Step 3: Make only benchmark-supported corrections**
 
 If the first run exposes a defect, reproduce it with the narrowest failing
 assertion before changing production code. Do not loosen the `1e-10`
 Hamiltonian/Carter gates. Finite-distance edge tolerance may be tightened
 after a two-radius convergence sweep, but may not be enlarged beyond `3e-2`.
 
-- [ ] **Step 4: Run focused Phase 2 tests**
+- [x] **Step 4: Run focused Phase 2 tests**
 
 ```bash
 make \
@@ -904,7 +904,7 @@ make \
 
 Expected: every focused assertion passes.
 
-- [ ] **Step 5: Run complete release verification**
+- [x] **Step 5: Run complete release verification**
 
 ```bash
 make clean
@@ -916,7 +916,7 @@ git diff --check
 Expected: all relativity and fixture-independent legacy assertions pass.
 The optional DE440 fixture may remain a visible skip and is not counted.
 
-- [ ] **Step 6: Run sanitizers**
+- [x] **Step 6: Run sanitizers**
 
 ```bash
 make clean
@@ -936,7 +936,7 @@ UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1
 
 Expected: no sanitizer diagnostic.
 
-- [ ] **Step 7: Write validation reports from actual output**
+- [x] **Step 7: Write validation reports from actual output**
 
 Each report must contain the v3 headings:
 
@@ -959,7 +959,7 @@ Carter relative/absolute drift, special-orbit errors, analytic shadow
 fixtures, numerical edge errors, compiler/platform, assertion totals, and
 sanitizer results. Do not paste complete terminal logs.
 
-- [ ] **Step 8: Advance the status gate**
+- [x] **Step 8: Advance the status gate**
 
 Only after Steps 4-7 pass, update:
 
@@ -974,7 +974,7 @@ NEXT_ALLOWED_ACTION: Phase 3 only
 `RELATIVITY_STATUS.md` must preserve explicit missing work and list at least
 three likely bugs plus fastest falsification commands.
 
-- [ ] **Step 9: Restore release artifacts and reverify documentation tree**
+- [x] **Step 9: Restore release artifacts and reverify documentation tree**
 
 ```bash
 make clean
@@ -987,7 +987,7 @@ git status --short
 Expected: release build/test success and only intended documentation/status
 changes before the evidence commit.
 
-- [ ] **Step 10: Commit the gate evidence**
+- [x] **Step 10: Commit the gate evidence**
 
 ```bash
 git add tests/relativity/test_kerr_shadow.cpp \
