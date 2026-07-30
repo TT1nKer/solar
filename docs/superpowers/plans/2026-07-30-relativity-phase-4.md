@@ -497,7 +497,7 @@ git commit -m "feat(relativity): add canonical Kerr chart transforms"
 - Consumes: `KerrSchildCartesianMetric`, `GeodesicEvent`.
 - Produces: the three event helpers declared in the design.
 
-- [ ] **Step 1: Write event contract tests**
+- [x] **Step 1: Write event contract tests**
 
 Require:
 
@@ -517,7 +517,7 @@ radius. Create an event from a temporary metric and invoke it later to prove
 owned lifetime. Require negative/non-finite configured radii and
 non-positive/non-finite root tolerances to throw.
 
-- [ ] **Step 2: Run the event test and confirm the red state**
+- [x] **Step 2: Run the event test and confirm the red state**
 
 Run:
 
@@ -527,7 +527,7 @@ make -j4 tests/relativity/test_kerr_schild_events
 
 Expected: compilation fails because the event header is absent.
 
-- [ ] **Step 3: Implement validated event factories**
+- [x] **Step 3: Implement validated event factories**
 
 Capture `KerrSchildCartesianMetric` by value in each event callback and
 return:
@@ -540,7 +540,7 @@ Use `std::max(0.05*metric.mass(), configured_radius_M)`, treating zero as
 the default. Event construction validates all scalar inputs before creating
 the callback.
 
-- [ ] **Step 4: Run event tests**
+- [x] **Step 4: Run event tests**
 
 Run:
 
@@ -553,7 +553,7 @@ make -j4 tests/relativity/test_kerr_schild_events \
 
 Expected: both pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_schild_events.h \
