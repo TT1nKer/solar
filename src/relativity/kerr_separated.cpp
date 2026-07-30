@@ -2,6 +2,7 @@
 
 #include "geodesic_event_selection.h"
 #include "kerr_separated_config_internal.h"
+#include "kerr_separated_diagnostics.h"
 #include "kerr_separated_events.h"
 #include "kerr_separated_state.h"
 #include "kerr_separated_step.h"
@@ -193,24 +194,6 @@ KerrSeparatedIntegrator::integrate(
                 error.what());
     }
 
-    const detail::GeodesicEventSelection initial_event =
-        detail::select_initial_any_event(initial, active_events);
-    if (initial_event.status ==
-        detail::GeodesicEventSelectionStatus::Failed) {
-        return terminate(
-            initial,
-            TerminationReason::EventRootFailure,
-            initial_event.message);
-    }
-    if (initial_event.status ==
-        detail::GeodesicEventSelectionStatus::Found) {
-        return terminate(
-            initial,
-            initial_event.reason,
-            initial_event.message,
-            initial_event.hit);
-    }
-
     detail::KerrSeparatedInitialState initialized;
     try {
         initialized =
@@ -247,6 +230,39 @@ KerrSeparatedIntegrator::integrate(
             "near-axis nonzero-Lz Kerr BL motion is unsupported");
     }
 
+    const detail::KerrSeparatedDiagnosticTracker
+        diagnostic_tracker(
+            *metric_, config.kind, constants, initial);
+    try {
+        diagnostic_tracker.initialize(
+            initialized.state, initial, diagnostics);
+    } catch (const std::exception& error) {
+        return terminate(
+            initial,
+            TerminationReason::NonFiniteState,
+            std::string(
+                "initial separated diagnostics failed: ") +
+                error.what());
+    }
+
+    const detail::GeodesicEventSelection initial_event =
+        detail::select_initial_any_event(initial, active_events);
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Failed) {
+        return terminate(
+            initial,
+            TerminationReason::EventRootFailure,
+            initial_event.message);
+    }
+    if (initial_event.status ==
+        detail::GeodesicEventSelectionStatus::Found) {
+        return terminate(
+            initial,
+            initial_event.reason,
+            initial_event.message,
+            initial_event.hit);
+    }
+
     detail::KerrSeparatedState current =
         initialized.state;
     PhaseSpaceState current_public = initial;
@@ -260,7 +276,6 @@ KerrSeparatedIntegrator::integrate(
     std::optional<PendingTurning> pending_turning;
     const detail::KerrSeparatedPotentials potentials(
         metric_->mass(), metric_->spin_length(), constants);
-    diagnostics.min_radius_M = initial.x.v[1];
 
     while (true) {
         if (attempted_steps >= config.max_total_steps) {
@@ -303,35 +318,27 @@ KerrSeparatedIntegrator::integrate(
 
             const double release_magnitude =
                 std::fabs(release.mino_step);
-            ++diagnostics.accepted_steps;
+            try {
+                diagnostic_tracker.accept(
+                    release.state,
+                    released_public,
+                    release_magnitude,
+                    diagnostics,
+                    release.root_radius_M);
+            } catch (const std::exception& error) {
+                return terminate(
+                    current_public,
+                    TerminationReason::NonFiniteState,
+                    std::string(
+                        "turning diagnostics failed: ") +
+                        error.what());
+            }
             if (pending_turning->coordinate ==
                 detail::TurningCoordinate::Radial) {
                 ++diagnostics.radial_turns;
             } else {
                 ++diagnostics.polar_turns;
             }
-            diagnostics.min_mino_step =
-                std::isnan(diagnostics.min_mino_step)
-                    ? release_magnitude
-                    : std::min(
-                          diagnostics.min_mino_step,
-                          release_magnitude);
-            diagnostics.max_mino_step =
-                std::isnan(diagnostics.max_mino_step)
-                    ? release_magnitude
-                    : std::max(
-                          diagnostics.max_mino_step,
-                          release_magnitude);
-            diagnostics.min_radius_M = std::min(
-                {diagnostics.min_radius_M,
-                 release.root_radius_M,
-                 released_public.x.v[1]});
-            diagnostics.azimuthal_advance =
-                released_public.x.v[3] - initial.x.v[3];
-            diagnostics.winding =
-                diagnostics.azimuthal_advance /
-                (2.0 *
-                 3.141592653589793238462643383279502884);
 
             current = release.state;
             current_public = released_public;
@@ -552,28 +559,20 @@ KerrSeparatedIntegrator::integrate(
                 "accepted separated state is outside Kerr BL");
         }
 
-        ++diagnostics.accepted_steps;
-        diagnostics.min_mino_step =
-            std::isnan(diagnostics.min_mino_step)
-                ? accepted_step_magnitude
-                : std::min(
-                      diagnostics.min_mino_step,
-                      accepted_step_magnitude);
-        diagnostics.max_mino_step =
-            std::isnan(diagnostics.max_mino_step)
-                ? accepted_step_magnitude
-                : std::max(
-                      diagnostics.max_mino_step,
-                      accepted_step_magnitude);
-        diagnostics.min_radius_M = std::min(
-            diagnostics.min_radius_M,
-            accepted_public.x.v[1]);
-        diagnostics.azimuthal_advance =
-            accepted_public.x.v[3] - initial.x.v[3];
-        diagnostics.winding =
-            diagnostics.azimuthal_advance /
-            (2.0 *
-             3.141592653589793238462643383279502884);
+        try {
+            diagnostic_tracker.accept(
+                accepted,
+                accepted_public,
+                accepted_step_magnitude,
+                diagnostics);
+        } catch (const std::exception& error) {
+            return terminate(
+                current_public,
+                TerminationReason::NonFiniteState,
+                std::string(
+                    "accepted diagnostics failed: ") +
+                    error.what());
+        }
 
         current = accepted;
         current_public = accepted_public;

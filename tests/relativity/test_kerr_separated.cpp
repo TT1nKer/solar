@@ -395,6 +395,126 @@ int main() {
     check(
         "critical photon is not a simple radial turn",
         critical.diagnostics.radial_turns == 0);
+
+    PhaseSpaceState diagnostic_initial = outgoing;
+    diagnostic_initial.p.v[1] *=
+        1.0 + 2.0e-13;
+    const double diagnostic_initial_constraint =
+        hamiltonian_constraint_error(
+            schwarzschild,
+            diagnostic_initial,
+            GeodesicKind::Null);
+    check(
+        "diagnostic fixture has visible in-gate constraint",
+        diagnostic_initial_constraint > 1.0e-15 &&
+            diagnostic_initial_constraint < 1.0e-10);
+    auto diagnostic_config =
+        reference_config(1.0e-4, 1.0e-3, 0.1);
+    diagnostic_config.potential_tolerance = 1.0e-10;
+    const auto diagnostic_result = integrator.integrate(
+        diagnostic_initial, diagnostic_config);
+    check(
+        "constraint diagnostic includes the initial state",
+        diagnostic_result.diagnostics.max_constraint_error >=
+            0.99 * diagnostic_initial_constraint);
+    check(
+        "constraint diagnostic remains inside reference gate",
+        diagnostic_result.diagnostics.max_constraint_error <
+            1.0e-10);
+    check(
+        "Carter diagnostic is finite and inside reference gate",
+        std::isfinite(
+            diagnostic_result.diagnostics
+                .max_carter_rel_error) &&
+            diagnostic_result.diagnostics
+                    .max_carter_rel_error <
+                1.0e-10);
+    check(
+        "radial and polar residual diagnostics are finite",
+        std::isfinite(
+            diagnostic_result.diagnostics
+                .max_radial_residual) &&
+            std::isfinite(
+                diagnostic_result.diagnostics
+                    .max_polar_residual));
+    check_near(
+        "winding derives from unwrapped azimuth",
+        scattered.diagnostics.winding,
+        scattered.diagnostics.azimuthal_advance /
+            (2.0 * kPi),
+        1.0e-15);
+
+    const auto diagnostic_initial_hit =
+        integrator.integrate(
+            diagnostic_initial,
+            diagnostic_config,
+            {initial_event});
+    check(
+        "initial event still records initial constraint",
+        diagnostic_initial_hit.diagnostics
+                .max_constraint_error >=
+            0.99 * diagnostic_initial_constraint);
+    check(
+        "no-step minimum Mino step is unavailable",
+        std::isnan(
+            diagnostic_initial_hit.diagnostics
+                .min_mino_step));
+    check(
+        "no-step maximum Mino step is unavailable",
+        std::isnan(
+            diagnostic_initial_hit.diagnostics
+                .max_mino_step));
+
+    const GeodesicEvent non_finite_event{
+        "non-finite event",
+        [](const PhaseSpaceState& state) {
+            return state.x.v[1] > 10.01
+                       ? std::numeric_limits<double>::
+                             quiet_NaN()
+                       : -1.0;
+        },
+        EventDirection::Any,
+        TerminationReason::UserEvent,
+        1.0e-10,
+    };
+    const auto event_failure = integrator.integrate(
+        outgoing,
+        reference_config(5.0e-3, 5.0e-3, 1.0),
+        {non_finite_event});
+    check(
+        "non-finite event callback is explicit",
+        event_failure.diagnostics.reason ==
+            TerminationReason::EventRootFailure);
+    check(
+        "failed event step is not accepted",
+        event_failure.diagnostics.accepted_steps == 0);
+
+    PhaseSpaceState non_finite_initial = outgoing;
+    non_finite_initial.p.v[1] =
+        std::numeric_limits<double>::quiet_NaN();
+    const auto non_finite_result = integrator.integrate(
+        non_finite_initial, reference_config());
+    check(
+        "non-finite initial state is explicit",
+        non_finite_result.diagnostics.reason ==
+            TerminationReason::NonFiniteState);
+    check(
+        "non-finite initial state accepts no step",
+        non_finite_result.diagnostics.accepted_steps == 0);
+
+    PhaseSpaceState invalid_initial = outgoing;
+    invalid_initial.x.v[1] =
+        schwarzschild.outer_horizon_radius();
+    const auto invalid_result = integrator.integrate(
+        invalid_initial, reference_config());
+    check(
+        "invalid initial BL point is explicit",
+        invalid_result.diagnostics.reason ==
+            TerminationReason::InvalidMetricPoint);
+    check(
+        "invalid initial BL point accepts no step",
+        invalid_result.diagnostics.accepted_steps == 0);
+
     std::cout
         << std::setprecision(17)
         << "  turning_probe radial_reason="
