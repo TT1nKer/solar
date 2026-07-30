@@ -20,8 +20,17 @@ enum class GeodesicKind {
     TimelikeUnitMass,
 };
 
+constexpr bool is_valid_geodesic_kind(GeodesicKind kind) noexcept {
+    return kind == GeodesicKind::Null ||
+           kind == GeodesicKind::TimelikeUnitMass;
+}
+
 constexpr double hamiltonian_target(GeodesicKind kind) noexcept {
-    return kind == GeodesicKind::Null ? 0.0 : -0.5;
+    return kind == GeodesicKind::Null
+               ? 0.0
+               : kind == GeodesicKind::TimelikeUnitMass
+                     ? -0.5
+                     : std::numeric_limits<double>::quiet_NaN();
 }
 
 constexpr bool has_proper_time(GeodesicKind kind) noexcept {
