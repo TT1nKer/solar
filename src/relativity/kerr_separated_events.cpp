@@ -84,6 +84,25 @@ EventEvaluation evaluate_event(
     };
 }
 
+PhaseSpaceState reconstruct_kerr_phase_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrTurningPhaseState& phase,
+    const KerrSeparatedState& projected) {
+    try {
+        // Match ordinary accepted phase steps whenever the dense state is
+        // inside both separated potentials.
+        return reconstruct_kerr_phase_space(
+            metric, constants, projected);
+    } catch (const std::domain_error&) {
+        // Dense candidates can lie roundoff-far outside a potential at a
+        // turning point. The phase representation remains authoritative
+        // there and is required to keep bracketing the event root.
+        return reconstruct_kerr_turning_phase(
+            metric, constants, phase);
+    }
+}
+
 KerrSeparatedEventHit make_hit(
     std::size_t event_index,
     double mino_parameter,
@@ -441,9 +460,9 @@ KerrSeparatedEventSelection select_first_kerr_phase_step_event(
     const auto public_projector =
         [&metric, &constants](
             const KerrTurningPhaseState& phase,
-            const KerrSeparatedState&) {
-            return reconstruct_kerr_turning_phase(
-                metric, constants, phase);
+            const KerrSeparatedState& state) {
+            return reconstruct_kerr_phase_event(
+                metric, constants, phase, state);
         };
     return select_first_event(
         dense_output,
@@ -480,9 +499,9 @@ select_first_kerr_phase_interval_event(
     const auto public_projector =
         [&metric, &constants](
             const KerrTurningPhaseState& phase,
-            const KerrSeparatedState&) {
-            return reconstruct_kerr_turning_phase(
-                metric, constants, phase);
+            const KerrSeparatedState& state) {
+            return reconstruct_kerr_phase_event(
+                metric, constants, phase, state);
         };
     return select_first_event(
         interval,
