@@ -1,6 +1,6 @@
 #include "solar/relativity/kerr_shadow.h"
 
-#include "kerr_shadow_geometry.h"
+#include "kerr_shadow_sampling.h"
 #include "solar/relativity/kerr_orbits.h"
 
 #include <cmath>
@@ -39,6 +39,11 @@ std::vector<ShadowCriticalPoint> schwarzschild_shadow_curve(
         2 * samples_per_branch - 2;
     const double radius = std::sqrt(27.0) * mass;
     const double photon_radius = 3.0 * mass;
+    if (!std::isfinite(radius) ||
+        !std::isfinite(photon_radius)) {
+        throw std::overflow_error(
+            "shadow curve exceeds the finite output range");
+    }
     const double two_pi = 2.0 * std::acos(-1.0);
 
     std::vector<ShadowCriticalPoint> curve;
@@ -90,78 +95,25 @@ std::vector<ShadowCriticalPoint> bardeen_shadow_curve(
         std::sin(static_cast<long double>(inclination));
     const long double cos_inclination =
         std::cos(static_cast<long double>(inclination));
-    const detail::VisiblePhotonInterval visible_interval =
-        detail::find_visible_photon_interval(
-            spin,
-            sin_inclination,
-            cos_inclination,
-            first_normalized_radius,
-            last_normalized_radius);
+    const std::vector<detail::NormalizedShadowPoint>
+        normalized_upper_branch =
+            detail::sample_normalized_kerr_shadow_upper_branch(
+                spin,
+                sin_inclination,
+                cos_inclination,
+                first_normalized_radius,
+                last_normalized_radius,
+                samples_per_branch);
 
     std::vector<ShadowCriticalPoint> upper_branch;
     upper_branch.reserve(samples_per_branch);
-    for (std::size_t index = 0;
-         index < samples_per_branch;
-         ++index) {
-        const long double fraction =
-            static_cast<long double>(index) /
-            static_cast<long double>(samples_per_branch - 1);
-        const long double normalized_radius =
-            visible_interval.first_radius +
-            fraction *
-                (visible_interval.last_radius -
-                 visible_interval.first_radius);
-        const long double photon_radius =
-            mass * normalized_radius;
-        const detail::BardeenQuantities quantities =
-            detail::evaluate_bardeen_quantities(
-                normalized_radius,
-                spin,
-                sin_inclination,
-                cos_inclination);
-        long double beta_radicand =
-            quantities.beta_radicand;
-        const bool endpoint =
-            index == 0 ||
-            index + 1 == samples_per_branch;
-        if (endpoint) {
-            beta_radicand = 0.0L;
-        } else if (beta_radicand <
-                   -detail::bardeen_radicand_tolerance(
-                       quantities)) {
-            throw std::domain_error(
-                "shadow sample escaped its physical visible interval");
-        } else if (beta_radicand < 0.0L) {
-            beta_radicand = 0.0L;
-        }
-
-        long double normalized_alpha =
-            -quantities.xi / sin_inclination;
-        if (endpoint &&
-            sin_inclination < 0.1L) {
-            const long double tip_magnitude_squared =
-                quantities.eta +
-                spin * spin *
-                    cos_inclination * cos_inclination;
-            if (!std::isfinite(tip_magnitude_squared) ||
-                tip_magnitude_squared < 0.0L) {
-                throw std::domain_error(
-                    "shadow tip coordinate is not physical");
-            }
-            const long double tip_magnitude =
-                std::sqrt(tip_magnitude_squared) /
-                std::fabs(cos_inclination);
-            normalized_alpha =
-                quantities.xi >= 0.0L
-                    ? -tip_magnitude
-                    : tip_magnitude;
-        }
+    for (const detail::NormalizedShadowPoint& sample :
+         normalized_upper_branch) {
         const ShadowCriticalPoint point{
+            static_cast<double>(mass * sample.alpha),
+            static_cast<double>(mass * sample.beta),
             static_cast<double>(
-                mass * normalized_alpha),
-            static_cast<double>(
-                mass * std::sqrt(beta_radicand)),
-            static_cast<double>(photon_radius)};
+                mass * sample.photon_radius)};
         if (!std::isfinite(point.alpha) ||
             !std::isfinite(point.beta) ||
             !std::isfinite(point.photon_radius)) {

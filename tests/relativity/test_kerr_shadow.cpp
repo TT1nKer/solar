@@ -253,6 +253,46 @@ int main() {
             7.0e-13);
     }
 
+    const std::vector<ShadowCriticalPoint>
+        extreme_axis_curve =
+            bardeen_shadow_curve(
+                positive_spin, 1.0e-14, 3);
+    check(
+        "extreme-axis curve retains an interior sample",
+        extreme_axis_curve.size() == 4);
+    if (extreme_axis_curve.size() == 4) {
+        check(
+            "extreme-axis interior point stays finite",
+            std::isfinite(extreme_axis_curve[1].alpha) &&
+                std::isfinite(extreme_axis_curve[1].beta) &&
+                std::isfinite(
+                    extreme_axis_curve[1].photon_radius));
+        check_near(
+            "extreme-axis interior alpha approaches the polar limit",
+            extreme_axis_curve[1].alpha,
+            0.0,
+            1.0e-10);
+    }
+    bool sub_ulp_axis_is_safe = false;
+    try {
+        const std::vector<ShadowCriticalPoint>
+            sub_ulp_axis_curve =
+                bardeen_shadow_curve(
+                    positive_spin, 1.0e-15, 3);
+        sub_ulp_axis_is_safe =
+            sub_ulp_axis_curve.size() == 4 &&
+            std::isfinite(sub_ulp_axis_curve[1].alpha) &&
+            std::fabs(sub_ulp_axis_curve[1].alpha) <
+                1.0e-10;
+    } catch (const std::domain_error&) {
+        // Rejecting an unresolvable interval is safer than returning
+        // silently distorted screen coordinates.
+        sub_ulp_axis_is_safe = true;
+    }
+    check(
+        "sub-ULP axis view is accurate or explicitly rejected",
+        sub_ulp_axis_is_safe);
+
     const KerrBoyerLindquistMetric negative_spin(1.0, -0.5);
     const std::vector<ShadowCriticalPoint> negative_curve =
         bardeen_shadow_curve(
@@ -333,6 +373,20 @@ int main() {
         check("overflowing shadow output rejected", false);
     } catch (const std::overflow_error&) {
         check("overflowing shadow output rejected", true);
+    }
+    try {
+        const KerrBoyerLindquistMetric huge_schwarzschild(
+            std::numeric_limits<double>::max() / 3.0,
+            0.0);
+        static_cast<void>(bardeen_shadow_curve(
+            huge_schwarzschild, half_pi, 2));
+        check(
+            "overflowing Schwarzschild shadow rejected",
+            false);
+    } catch (const std::overflow_error&) {
+        check(
+            "overflowing Schwarzschild shadow rejected",
+            true);
     }
 
     std::cout << "\n=== Results: " << passed

@@ -30,4 +30,11 @@ VisiblePhotonInterval find_visible_photon_interval(
     long double equatorial_first,
     long double equatorial_last);
 
+long double find_photon_radius_for_screen_alpha(
+    long double spin,
+    long double sin_inclination,
+    long double first_radius,
+    long double last_radius,
+    long double screen_alpha);
+
 } // namespace solar::relativity::detail

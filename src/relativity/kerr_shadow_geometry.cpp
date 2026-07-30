@@ -178,4 +178,45 @@ VisiblePhotonInterval find_visible_photon_interval(
         first_visible, last_visible};
 }
 
+long double find_photon_radius_for_screen_alpha(
+    long double spin,
+    long double sin_inclination,
+    long double first_radius,
+    long double last_radius,
+    long double screen_alpha) {
+    const long double spin_squared = spin * spin;
+    const auto screen_alpha_equation =
+        [spin,
+         spin_squared,
+         sin_inclination,
+         screen_alpha](long double radius) {
+            return xi_numerator(radius, spin_squared) -
+                   screen_alpha * spin *
+                       sin_inclination *
+                       (radius - 1.0L);
+        };
+    const long double first_value =
+        screen_alpha_equation(first_radius);
+    const long double last_value =
+        screen_alpha_equation(last_radius);
+    if (!std::isfinite(first_value) ||
+        !std::isfinite(last_value) ||
+        (first_value > 0.0L && last_value > 0.0L) ||
+        (first_value < 0.0L && last_value < 0.0L)) {
+        throw std::domain_error(
+            "screen alpha does not bracket a spherical photon orbit");
+    }
+    if (first_value == 0.0L) {
+        return first_radius;
+    }
+    if (last_value == 0.0L) {
+        return last_radius;
+    }
+    return bisect_sign_change(
+        first_radius,
+        last_radius,
+        screen_alpha_equation,
+        first_value >= 0.0L);
+}
+
 } // namespace solar::relativity::detail
