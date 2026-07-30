@@ -26,6 +26,11 @@ cinema-quality Kerr black-hole sequence. The film is both a portfolio artifact
 and a forcing function for better Solar APIs. Solar must never depend on
 Gargantua, CUDA, film assets, or a DCC application.
 
+Solar through relativity Phase 2 is the first usable library baseline. It is
+not feature-complete, but Gargantua does not wait for every later Solar phase
+before beginning. Film development exposes concrete missing capabilities,
+which are added back to Solar when they are reusable.
+
 The initial public brand is:
 
 ```text
@@ -53,8 +58,10 @@ paths, or letting a render preset alter Solar physics are prohibited.
 ## 3. Solar as a consumable library
 
 Solar retains the existing C++17 library and zero-dependency CPU reference
-core. The existing Makefile remains supported while an installable CMake
-package is added incrementally.
+core. Its current `libsolar.a`, public headers, tests, and Phase 2 validation
+form the initial development baseline. The existing Makefile remains
+supported while only the external-consumption support required by Gargantua
+is added.
 
 The first external-consumption contract is:
 
@@ -65,7 +72,9 @@ target_link_libraries(gargantua PRIVATE Solar::Relativity)
 
 During pre-release development, Gargantua may use CMake `FetchContent` pinned
 to an immutable Solar commit. Public film manifests must use a Solar release
-tag. Solar will provide:
+tag. This packaging work is a small enabling change discovered by the first
+Gargantua consumer, not a declaration that Solar is finished. Solar will
+provide:
 
 - exported `Solar::Core` and `Solar::Relativity` targets;
 - installable public headers and package configuration;
@@ -79,7 +88,29 @@ mandatory Solar dependency. The first GPU implementation remains a
 Gargantua backend and is accepted only through comparison with Solar's CPU
 reference.
 
-## 4. Gargantua Studio product boundary
+## 4. Demand-driven Solar evolution
+
+Gargantua drives Solar through a controlled feedback loop:
+
+```text
+film vertical slice exposes a missing capability
+  -> classify ownership
+  -> reusable physics/numerics/API change goes to Solar
+  -> Solar focused tests and validation pass
+  -> Gargantua advances its pinned Solar commit
+  -> shot rendering resumes with recorded versions
+```
+
+A requirement belongs in Solar when it is useful beyond the current shot,
+defines physical or numerical behavior, or is needed by another possible
+consumer. It remains in Gargantua when it concerns a scene, camera, asset,
+look, render schedule, film output, or artistic radiation preset.
+
+Gargantua may not work around a missing Solar capability by importing private
+headers or maintaining an unvalidated permanent fork. Experimental code may
+begin in Gargantua only when its ownership is genuinely application-specific.
+
+## 5. Gargantua Studio product boundary
 
 Gargantua Studio is an independent C++/CUDA application and focused film
 toolkit, not a second general-purpose physics engine and not a replacement
@@ -111,7 +142,7 @@ film-output -> completed frame data
 Scene and output modules do not call CUDA. Solar-facing code does not know
 about film presets. CUDA kernels do not parse files or own the render queue.
 
-## 5. Build versus reuse
+## 6. Build versus reuse
 
 Gargantua implements only the parts that create scientific and product value:
 
@@ -134,7 +165,7 @@ OptiX or RT cores may later accelerate conventional mesh intersection. They
 are not treated as a curved-spacetime geodesic integrator. Version numbers are
 pinned only after probing the actual RTX 3080 driver/toolkit combination.
 
-## 6. Physics and artistic modes
+## 7. Physics and artistic modes
 
 Geometry and ray propagation always use validated physics. Radiation is
 explicitly classified:
@@ -149,7 +180,7 @@ metric, chart, mass, spin, observer, integrator/backend, tolerances, scene
 hash, sample counts, unconverged pixels, and output checksums. The film may be
 art directed, but no artistic choice may be represented as a physical result.
 
-## 7. RTX 3080 execution model
+## 8. RTX 3080 execution model
 
 The RTX 3080 is the first production render worker. The local Apple Silicon
 machine remains the development host and CPU-reference environment.
@@ -173,7 +204,7 @@ The production-time target is at most 48 hours for the first 288-frame
 sequence on the RTX 3080. This is a performance target and may not weaken
 physics or convergence gates.
 
-## 8. First film acceptance target
+## 9. First film acceptance target
 
 The first release is one continuous exterior Kerr hero shot:
 
@@ -208,7 +239,7 @@ The final sequence contains zero silently unconverged pixels. Any unresolved
 pixel remains visible in diagnostics and blocks the master until rerendered or
 explicitly waived in the validation report.
 
-## 9. Frame data flow
+## 10. Frame data flow
 
 ```text
 versioned scene file
@@ -229,7 +260,7 @@ The scene contract uses explicit units and rejects unknown enum values,
 non-finite numbers, invalid paths, impossible camera states, unsupported
 Solar contracts, and resource limits before allocating a render.
 
-## 10. Failure and recovery contract
+## 11. Failure and recovery contract
 
 Every failure is one of:
 
@@ -251,7 +282,7 @@ Resume verifies the scene hash, software versions, device policy, and every
 completed tile checksum. A changed scene or physics version starts a new
 render generation instead of mixing frames.
 
-## 11. Verification gates
+## 12. Verification gates
 
 Solar remains the authority for CPU equations and validation. Gargantua adds:
 
@@ -269,17 +300,20 @@ Solar remains the authority for CPU equations and validation. Gargantua adds:
 The exact v3 error gates remain hard requirements. Image quality settings may
 increase work but may not relabel unconverged physics as success.
 
-## 12. Delivery sequence
+## 13. Delivery sequence
 
 This program is too large for one implementation plan. Work proceeds through
 separate reviewed specs and plans:
 
-1. **Solar package boundary:** CMake export/install, version contract, and a
-   minimal external consumer test.
-2. **Solar physics continuation:** Phase 3 separated Kerr solver, followed by
-   the remaining v3 CPU validation needed by rendering.
-3. **Gargantua repository foundation:** independent repository, pinned Solar
-   dependency, scene contract, CPU still-image probe, and render manifest.
+1. **Gargantua repository foundation:** create the independent repository,
+   pin the current Solar Phase 2 baseline, and build one external CPU probe.
+   Add only the minimum Solar package/export support required by that probe.
+2. **First CPU image vertical slice:** scene contract, camera, render
+   manifest, Solar-backed reference rays, diagnostic image, and explicit
+   missing-capability report.
+3. **Render-driven Solar evolution:** implement Phase 3 and later reusable
+   physics in Solar as the vertical slices require it; validate each change
+   before advancing Gargantua's pinned commit.
 4. **CUDA backend:** RTX 3080 worker, tiled scheduler, CPU/GPU comparison,
    checkpointing, and diagnostic buffers.
 5. **Radiation and film output:** invariant transfer, emitting disk, OpenEXR,
@@ -289,11 +323,11 @@ separate reviewed specs and plans:
 7. **Web track:** reduced interactive renderer derived from validated assets
    and contracts, not a replacement physics implementation.
 
-The next implementation plan covers only item 1, the Solar package boundary.
-The Gargantua repository is not scaffolded until that external-consumer
-contract passes.
+The next implementation plan covers item 1 as one vertical slice: create the
+Gargantua repository and make a real external consumer work. Any Solar build
+change is limited to what that consumer proves it needs.
 
-## 13. Publication and licensing boundary
+## 14. Publication and licensing boundary
 
 No license is changed by this design. The new repository remains private
 until the owner explicitly selects publication and licensing terms. Before a
@@ -307,7 +341,7 @@ public release:
 This prevents the desire for propagation from silently making legal or asset
 licensing decisions.
 
-## 14. Authoritative references
+## 15. Authoritative references
 
 - Project v3 contract, especially sections 13, 20.4, 24, 25, 27, and 28.
 - CUDA C++ Programming Guide:
@@ -316,4 +350,3 @@ licensing decisions.
   <https://openexr.com/en/latest/index.html>.
 - OpenColorIO documentation:
   <https://opencolorio.org/>.
-
