@@ -1,4 +1,7 @@
 #include "solar/relativity/kerr_shadow.h"
+#include "solar/relativity/kerr_separated.h"
+#include "solar/relativity/local_initialization.h"
+#include "solar/relativity/observer.h"
 #include "solar/version.h"
 
 #include <algorithm>
@@ -43,11 +46,57 @@ int main() {
         return 3;
     }
 
+    const solar::relativity::Contravariant4 observer_position{
+        solar::relativity::Vec4{{
+            0.0,
+            20.0,
+            half_pi,
+            0.0,
+        }}};
+    const auto observer =
+        solar::relativity::make_zamo_observer(
+            metric, observer_position);
+    if (!observer) {
+        std::cerr << "installed ZAMO construction failed\n";
+        return 4;
+    }
+    const auto photon =
+        solar::relativity::initialize_local_photon(
+            metric,
+            *observer.frame,
+            solar::relativity::Vec3{{-1.0, 0.0, 0.0}});
+    if (!photon) {
+        std::cerr << "installed photon initialization failed\n";
+        return 5;
+    }
+    const auto separated_config =
+        solar::relativity::KerrSeparatedConfig::cpu_reference(
+            solar::relativity::GeodesicKind::Null,
+            1.0,
+            1.0e-5,
+            1.0e-4,
+            0.1);
+    const auto separated =
+        solar::relativity::KerrSeparatedIntegrator(metric)
+            .integrate(*photon.state, separated_config);
+    if (separated.diagnostics.reason !=
+            solar::relativity::TerminationReason::MaxAffine ||
+        separated.diagnostics.accepted_steps == 0 ||
+        separated.diagnostics.max_constraint_error >= 1.0e-10) {
+        std::cerr << "installed separated Kerr integration failed\n";
+        return 6;
+    }
+
     std::cout << std::setprecision(17)
               << "{\"solar_version\":\"" << solar::version
               << "\",\"physics_contract\":\"" << solar::physics_contract
               << "\",\"samples\":" << curve.size()
               << ",\"left_edge\":" << left_edge
-              << ",\"right_edge\":" << right_edge << "}\n";
+              << ",\"right_edge\":" << right_edge
+              << ",\"separated_steps\":"
+              << separated.diagnostics.accepted_steps
+              << ",\"separated_constraint\":"
+              << separated.diagnostics.max_constraint_error
+              << "}\n";
     return 0;
 }
