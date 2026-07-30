@@ -1,26 +1,19 @@
 # Solar Relativity Status
 
-CURRENT_PHASE: 4
-PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: b838c1f316ddd8c69c38234e711fe603202e0f47
+CURRENT_PHASE: 5
+PHASE_STATE: LOCAL_PASSED_AWAITING_LINUX_CI
+LAST_VERIFIED_COMMIT: 9f9c144f86bb296e1887522c0b1bb9317f4f41ad
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
-  Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
+  Phase 5 Ubuntu/GCC CI pending
 LAST_VERIFIED_COMMANDS:
 - `make clean`
 - `make -j4 test`
 - `make test-external-consumer`
-- GitHub C++ CI build, complete test suite, installed external consumer, CLI,
-  and sample-command gates
-- all 34 `tests/relativity/test_*` executables
-- AddressSanitizer and UndefinedBehaviorSanitizer build plus all seven Phase 4
-  focused executables
-- DOPRI, Hamiltonian, RMS, dense-output, invalid-domain, observer, local-state,
-  Carter, special-orbit, and analytic/numerical-shadow checks
-- horizontal-screen-sign, Bardeen-`xi`-sign, near-axis interior-stability,
-  and invalid-metric-as-capture mutation checks
-- independent 80-decimal Kerr special-radius and Bardeen-edge probe
-- controlled `1e-4M` common-event worldline mutation
-- canonical covector-transform transpose mutation
+- all 39 `tests/relativity/test_*` executables
+- combined AddressSanitizer/UndefinedBehaviorSanitizer build and all five
+  Phase 5 focused executables
+- wrong-sign observer-to-past attenuation mutation
+- BL-to-KS fluid four-velocity component-copy mutation
 - `git diff --check`
 
 ACTUALLY_COMPLETED:
@@ -105,21 +98,44 @@ ACTUALLY_COMPLETED:
   fixture-independent legacy assertions in release mode.
 - Passed all 189 assertions in the seven Phase 4 focused executables under
   AddressSanitizer and UndefinedBehaviorSanitizer.
+- Added a stable observer-to-past invariant formal solution with
+  `expm1`/small-optical-depth handling, exact constant-segment absorption, and
+  explicit finite-state failures.
+- Added validated local emitter frequency and redshift plus vacuum, grey, and
+  diagnostic emission models behind public fluid/emission boundaries.
+- Added analytic Kerr circular-disk and compact kinematic Gaussian-torus
+  material models with full Boyer–Lindquist/Kerr–Schild four-vector
+  transformation and explicit metric-parameter mismatch failures.
+- Added bounded thin-disk surface records with unit north normal, `g`, `g^3`,
+  and `g^4` transformations, front/back classification, opaque closure,
+  semi-transparent linear-intensity composition, and an explicit crossing
+  limit.
+- Proved Phase 5 public headers and symbols through a clean installed external
+  consumer that executes constant transfer, disk/torus samples, and a surface
+  crossing.
+- Passed 2462/2462 relativity assertions across 39 executables and 67/67
+  fixture-independent legacy assertions in Release mode.
+- Passed all 195 assertions in the five Phase 5 focused executables under
+  AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:
 - Analytic elliptic Kerr geodesics, fundamental frequencies, or long-time
   structure-preserving timelike integration.
 - Extremal/negative-radius Kerr extension, ring-singularity treatment, or
   quantum-gravity interior model.
-- Disk/material models, radiative transfer, reference renderer, image/movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
+- CPU reference renderer, thin-disk event integration, reference images,
+  movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
+- Absolute spectral calibration, detector bandpass, polarization, scattering,
+  returning radiation, self-gravity, magnetic evolution, or GRMHD.
 - DE440's eight external-data assertions on this machine.
-- Linux sanitizer or non-x86_64/non-arm64 verification.
+- Phase 5 Linux/GCC CI, Linux sanitizer, or non-x86_64/non-arm64 verification.
 - The one-off Carter-Q, Kerr inverse-domain, convergence, and multiprecision
   audit probes are supplementary evidence, not committed CI regression
   executables.
 
 CURRENT_BLOCKERS:
-- None.
+- No implementation blocker. Phase 5 awaits the required PR-head Linux/GCC
+  release-candidate CI before `PASSED`.
 
 MOST_LIKELY_BUGS:
 - Endpoint-bracket event detection can miss tangencies, multiple roots, or an even number of roots inside one accepted step.
@@ -160,6 +176,15 @@ MOST_LIKELY_BUGS:
 - Sanitizer validation is limited to Apple Clang 16 on macOS arm64; the
   Ubuntu/GCC CI run covers Release behavior only.
 - Missing default DE440 data remains a visible skip.
+- The disk temperature profile is a controlled zero-torque approximation and
+  the torus is a kinematic Gaussian; neither is a calibrated plasma model.
+- Material, frequency, and intensity units remain caller-selected. No absolute
+  spectrum or detector response has been validated.
+- Phase 5 consumes caller-supplied constant-coefficient segments and localized
+  surface states; Phase 6 must validate adaptive accepted-step sampling and
+  repeated disk-event localization.
+- Near-extremal, long-path, and dense multi-crossing transfer lack a broader
+  independent precision sweep.
 
 FASTEST_WAY_TO_FALSIFY:
 - `./tests/relativity/test_dopri5`: tableau, RMS, per-component scale, controller, dense output, finite-value gates, and representable independent-variable progress.
@@ -216,9 +241,21 @@ FASTEST_WAY_TO_FALSIFY:
 - `./tests/relativity/test_kerr_separated_turning_phase`: phase crossing,
   root-time accuracy, duplicate-count prevention, and critical classification.
 - `make test-external-consumer`: installed headers, symbols, observer/local
-  initialization, and separated integration.
+  initialization, separated integration, invariant transfer, Kerr matter, and
+  thin-disk surface composition.
+- `./tests/relativity/test_radiative_transfer`: constant analytic transfer,
+  stable thin/thick limits, subdivision, sign, and failure gates.
+- `./tests/relativity/test_emission_models`: boosted redshift and invariant
+  grey/vacuum/debug coefficient contracts.
+- `./tests/relativity/test_transfer_failures`: malformed runtime samples,
+  callback exceptions, non-timelike emitters, and finite-range failures.
+- `./tests/relativity/test_fluid_models`: disk/torus profiles, support,
+  timelike normalization, parameter mismatch, and BL/KS vector agreement.
+- `./tests/relativity/test_thin_disk`: one/two/eight crossings, opacity,
+  `g` powers, BL/KS normal, bounds, and failure atomicity.
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Phase 5 invariant radiative transfer. Do not enter the reference renderer,
-  GPU, or UI before the Phase 5 gate passes.
+- Publish the Phase 5 release candidate and require PR-head Linux/GCC CI.
+  Enter Phase 6 CPU reference rendering only after Phase 5 is `PASSED`; do not
+  begin GPU, WASM, or UI first.

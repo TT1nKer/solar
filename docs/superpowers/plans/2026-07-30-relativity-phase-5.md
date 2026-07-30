@@ -914,7 +914,7 @@ git commit -m "test(relativity): consume Phase 5 transfer API"
 - Consumes: all Phase 5 measured gates.
 - Produces: reproducible evidence and a clean release candidate.
 
-- [ ] **Step 1: Run clean Release verification**
+- [x] **Step 1: Run clean Release verification**
 
 Run:
 
@@ -929,7 +929,7 @@ Record exact relativity, legacy, total, and Phase 5 focused assertion counts.
 Record the optional DE440 skip separately. Any required failure keeps Phase 5
 incomplete.
 
-- [ ] **Step 2: Run combined ASan/UBSan**
+- [x] **Step 2: Run combined ASan/UBSan**
 
 After `make clean`, build the five focused executables once with:
 
@@ -953,7 +953,7 @@ UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
 
 Repeat for the other four and require no diagnostic.
 
-- [ ] **Step 3: Write measured validation evidence**
+- [x] **Step 3: Write measured validation evidence**
 
 `docs/validation/relativity_10_radiative_transfer.md` must include:
 
@@ -974,7 +974,7 @@ Update every `RELATIVITY_STATUS.md` field. Before Linux CI use
 `LOCAL_PASSED_AWAITING_LINUX_CI`; move to `PASSED` only after the PR head CI
 succeeds.
 
-- [ ] **Step 4: Run the final release-candidate set**
+- [x] **Step 4: Run the final release-candidate set**
 
 Restore normal Release objects, then:
 
@@ -989,7 +989,7 @@ git status --short
 Expected: only intentional Phase 5 files are changed and every required gate
 passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/validation/relativity_10_radiative_transfer.md \
