@@ -56,19 +56,22 @@ bool direction_matches(
     return end_value < start_value;
 }
 
-template <std::size_t N, typename Projector>
+template <
+    typename StateSource,
+    typename StateProjector,
+    typename PublicProjector>
 EventEvaluation evaluate_event(
-    const KerrBoyerLindquistMetric& metric,
-    const KerrConstants& constants,
-    const numerics::Dopri5DenseOutput<N>& dense_output,
+    const StateSource& state_source,
     const GeodesicEvent& event,
     double mino_parameter,
-    const Projector& projector) {
+    const StateProjector& state_projector,
+    const PublicProjector& public_projector) {
+    const auto source_state =
+        state_source.evaluate(mino_parameter);
     KerrSeparatedState state =
-        projector(dense_output.evaluate(mino_parameter));
+        state_projector(source_state);
     PhaseSpaceState public_state =
-        reconstruct_kerr_phase_space(
-            metric, constants, state);
+        public_projector(source_state, state);
     const double value = event.function(public_state);
     if (!std::isfinite(value)) {
         throw std::domain_error(
@@ -100,16 +103,18 @@ KerrSeparatedEventHit make_hit(
     };
 }
 
-template <std::size_t N, typename Projector>
+template <
+    typename StateSource,
+    typename StateProjector,
+    typename PublicProjector>
 LocatedEvent locate_event(
     std::size_t event_index,
     const GeodesicEvent& event,
-    const KerrBoyerLindquistMetric& metric,
-    const KerrConstants& constants,
-    const numerics::Dopri5DenseOutput<N>& dense_output,
-    const Projector& projector) {
-    const double start_mino = dense_output.start();
-    const double end_mino = dense_output.end();
+    const StateSource& state_source,
+    const StateProjector& state_projector,
+    const PublicProjector& public_projector) {
+    const double start_mino = state_source.start();
+    const double end_mino = state_source.end();
     const double span = end_mino - start_mino;
     if (!std::isfinite(span) || span == 0.0) {
         return LocatedEvent{
@@ -123,19 +128,17 @@ LocatedEvent locate_event(
     EventEvaluation end;
     try {
         start = evaluate_event(
-            metric,
-            constants,
-            dense_output,
+            state_source,
             event,
             start_mino,
-            projector);
+            state_projector,
+            public_projector);
         end = evaluate_event(
-            metric,
-            constants,
-            dense_output,
+            state_source,
             event,
             end_mino,
-            projector);
+            state_projector,
+            public_projector);
     } catch (const std::exception& error) {
         return LocatedEvent{
             KerrSeparatedEventStatus::Failed,
@@ -244,12 +247,11 @@ LocatedEvent locate_event(
         EventEvaluation evaluation;
         try {
             evaluation = evaluate_event(
-                metric,
-                constants,
-                dense_output,
+                state_source,
                 event,
                 mino,
-                projector);
+                state_projector,
+                public_projector);
         } catch (const std::exception& error) {
             return LocatedEvent{
                 KerrSeparatedEventStatus::Failed,
@@ -287,20 +289,22 @@ LocatedEvent locate_event(
     };
 }
 
-template <std::size_t N, typename Projector>
+template <
+    typename StateSource,
+    typename StateProjector,
+    typename PublicProjector>
 KerrSeparatedEventSelection select_first_event(
-    const KerrBoyerLindquistMetric& metric,
-    const KerrConstants& constants,
-    const numerics::Dopri5DenseOutput<N>& dense_output,
+    const StateSource& state_source,
     const std::vector<GeodesicEvent>& events,
-    const Projector& projector) {
+    const StateProjector& state_projector,
+    const PublicProjector& public_projector) {
     std::optional<KerrSeparatedEventHit> selected;
     TerminationReason selected_reason =
         TerminationReason::UserEvent;
     double selected_fraction =
         std::numeric_limits<double>::infinity();
     const double span =
-        dense_output.end() - dense_output.start();
+        state_source.end() - state_source.start();
 
     for (std::size_t index = 0;
          index < events.size();
@@ -308,10 +312,9 @@ KerrSeparatedEventSelection select_first_event(
         const LocatedEvent located = locate_event(
             index,
             events[index],
-            metric,
-            constants,
-            dense_output,
-            projector);
+            state_source,
+            state_projector,
+            public_projector);
         if (located.status ==
             KerrSeparatedEventStatus::Failed) {
             return failed_selection(located.message);
@@ -323,7 +326,7 @@ KerrSeparatedEventSelection select_first_event(
 
         const double fraction =
             (located.hit->mino_parameter -
-             dense_output.start()) /
+             state_source.start()) /
             span;
         if (fraction < selected_fraction) {
             selected_fraction = fraction;
@@ -343,6 +346,56 @@ KerrSeparatedEventSelection select_first_event(
     };
 }
 
+class KerrPhaseIntervalSource {
+public:
+    KerrPhaseIntervalSource(
+        const KerrBoyerLindquistMetric& metric,
+        const KerrConstants& constants,
+        const KerrSeparatedPotentials& potentials,
+        const KerrTurningPhaseState& initial_phase,
+        double initial_mino,
+        double mino_step,
+        const KerrSeparatedConfig& config) noexcept
+        : metric_(&metric),
+          constants_(&constants),
+          potentials_(&potentials),
+          initial_phase_(&initial_phase),
+          initial_mino_(initial_mino),
+          mino_step_(mino_step),
+          config_(&config) {}
+
+    double start() const noexcept {
+        return initial_mino_;
+    }
+
+    double end() const noexcept {
+        return initial_mino_ + mino_step_;
+    }
+
+    KerrTurningPhaseState evaluate(
+        double mino_parameter) const {
+        if (mino_parameter == initial_mino_) {
+            return *initial_phase_;
+        }
+        return advance_kerr_turning_phase(
+            *metric_,
+            *constants_,
+            *potentials_,
+            *initial_phase_,
+            mino_parameter - initial_mino_,
+            *config_);
+    }
+
+private:
+    const KerrBoyerLindquistMetric* metric_;
+    const KerrConstants* constants_;
+    const KerrSeparatedPotentials* potentials_;
+    const KerrTurningPhaseState* initial_phase_;
+    double initial_mino_;
+    double mino_step_;
+    const KerrSeparatedConfig* config_;
+};
+
 } // namespace
 
 KerrSeparatedEventSelection select_first_kerr_step_event(
@@ -359,12 +412,18 @@ KerrSeparatedEventSelection select_first_kerr_step_event(
                 directions.polar_direction,
             };
         };
+    const auto public_projector =
+        [&metric, &constants](
+            const numerics::StateN<5>&,
+            const KerrSeparatedState& state) {
+            return reconstruct_kerr_phase_space(
+                metric, constants, state);
+        };
     return select_first_event(
-        metric,
-        constants,
         dense_output,
         events,
-        projector);
+        projector,
+        public_projector);
 }
 
 KerrSeparatedEventSelection select_first_kerr_phase_step_event(
@@ -379,12 +438,118 @@ KerrSeparatedEventSelection select_first_kerr_phase_step_event(
             return project_kerr_turning_phase(
                 phase, direction_fallback);
         };
+    const auto public_projector =
+        [&metric, &constants](
+            const KerrTurningPhaseState& phase,
+            const KerrSeparatedState&) {
+            return reconstruct_kerr_turning_phase(
+                metric, constants, phase);
+        };
     return select_first_event(
-        metric,
-        constants,
         dense_output,
         events,
-        projector);
+        projector,
+        public_projector);
+}
+
+KerrSeparatedEventSelection
+select_first_kerr_phase_interval_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrSeparatedPotentials& potentials,
+    const KerrSeparatedState& direction_fallback,
+    const KerrTurningPhaseState& initial_phase,
+    double initial_mino,
+    double mino_step,
+    const KerrSeparatedConfig& config,
+    const std::vector<GeodesicEvent>& events) {
+    const KerrPhaseIntervalSource interval(
+        metric,
+        constants,
+        potentials,
+        initial_phase,
+        initial_mino,
+        mino_step,
+        config);
+    const auto projector =
+        [&direction_fallback](
+            const KerrTurningPhaseState& phase) {
+            return project_kerr_turning_phase(
+                phase, direction_fallback);
+        };
+    const auto public_projector =
+        [&metric, &constants](
+            const KerrTurningPhaseState& phase,
+            const KerrSeparatedState&) {
+            return reconstruct_kerr_turning_phase(
+                metric, constants, phase);
+        };
+    return select_first_event(
+        interval,
+        events,
+        projector,
+        public_projector);
+}
+
+KerrSeparatedEventSelection
+select_first_kerr_turning_release_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrSeparatedPotentials& potentials,
+    const KerrSeparatedState& direction_fallback,
+    const KerrTurningPhaseState& initial_phase,
+    double initial_mino,
+    double release_mino_step,
+    double root_mino_step,
+    const KerrSeparatedConfig& config,
+    const std::vector<GeodesicEvent>& events) {
+    if (root_mino_step == 0.0) {
+        return select_first_kerr_phase_interval_event(
+            metric,
+            constants,
+            potentials,
+            direction_fallback,
+            initial_phase,
+            initial_mino,
+            release_mino_step,
+            config,
+            events);
+    }
+
+    const auto approach_event =
+        select_first_kerr_phase_interval_event(
+            metric,
+            constants,
+            potentials,
+            direction_fallback,
+            initial_phase,
+            initial_mino,
+            root_mino_step,
+            config,
+            events);
+    if (approach_event.status !=
+        KerrSeparatedEventStatus::None) {
+        return approach_event;
+    }
+
+    const KerrTurningPhaseState root_phase =
+        advance_kerr_turning_phase(
+            metric,
+            constants,
+            potentials,
+            initial_phase,
+            root_mino_step,
+            config);
+    return select_first_kerr_phase_interval_event(
+        metric,
+        constants,
+        potentials,
+        direction_fallback,
+        root_phase,
+        initial_mino + root_mino_step,
+        release_mino_step - root_mino_step,
+        config,
+        events);
 }
 
 } // namespace solar::relativity::detail

@@ -55,6 +55,7 @@ struct TurningRelease {
     KerrSeparatedState state;
     KerrTurningPhaseState phase_state;
     double mino_step;
+    double root_mino_step;
     double root_radius_M;
 };
 
@@ -103,6 +104,11 @@ attempt_kerr_turning_phase_step(
 KerrSeparatedState project_kerr_turning_phase(
     const KerrTurningPhaseState& phase,
     const KerrSeparatedState& direction_fallback);
+
+PhaseSpaceState reconstruct_kerr_turning_phase(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrTurningPhaseState& phase);
 
 std::optional<TurningPhaseCrossing>
 locate_kerr_turning_phase_crossing(

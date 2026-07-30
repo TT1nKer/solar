@@ -224,6 +224,7 @@ TurningRelease release_kerr_turning_point(
         std::move(released),
         transitioned,
         transition_step,
+        approach_step,
         root_radius,
     };
 }

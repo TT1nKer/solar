@@ -342,6 +342,23 @@ int main() {
                 scattered_fine.final_state.x.v[3]) <
             1.0e-7);
 
+    constexpr double release_affine_limit = 10.415654;
+    const auto release_limited = integrator.integrate(
+        scattering,
+        reference_config(
+            1.0e-4,
+            1.0e-3,
+            release_affine_limit));
+    check(
+        "affine limit inside turning release is not skipped",
+        release_limited.diagnostics.reason ==
+            TerminationReason::MaxAffine);
+    check_near(
+        "turning release affine event is localized",
+        release_limited.final_state.affine,
+        release_affine_limit,
+        1.0e-10);
+
     const double starting_mu = 0.5;
     const double starting_theta = std::acos(starting_mu);
     const PhaseSpaceState polar_turn =

@@ -332,6 +332,91 @@ KerrSeparatedIntegrator::integrate(
                         error.what());
             }
 
+            const auto release_event =
+                detail::select_first_kerr_turning_release_event(
+                    *metric_,
+                    constants,
+                    potentials,
+                    current,
+                    turning_phase,
+                    current_mino,
+                    release.mino_step,
+                    release.root_mino_step,
+                    config,
+                    active_events);
+            if (release_event.status ==
+                detail::KerrSeparatedEventStatus::Failed) {
+                return terminate(
+                    current_public,
+                    TerminationReason::EventRootFailure,
+                    release_event.message);
+            }
+            if (release_event.hit.has_value()) {
+                const double event_step =
+                    release_event.hit->mino_parameter -
+                    current_mino;
+                const double event_step_magnitude =
+                    std::fabs(event_step);
+                if (event_step_magnitude == 0.0) {
+                    return terminate(
+                        release_event
+                            .hit->public_hit.state,
+                        release_event.reason,
+                        "geodesic event is at the current state",
+                        release_event.hit->public_hit);
+                }
+
+                const double progress =
+                    event_step * integration_direction;
+                const double root_progress =
+                    release.root_mino_step *
+                    integration_direction;
+                const double progress_tolerance =
+                    8.0 *
+                    std::numeric_limits<double>::epsilon() *
+                    std::max(1.0, root_progress);
+                const bool crossed_turning_root =
+                    progress + progress_tolerance >=
+                    root_progress;
+                const double additional_minimum_radius =
+                    crossed_turning_root &&
+                            pending_turning->coordinate ==
+                                detail::TurningCoordinate::Radial
+                        ? release.root_radius_M
+                        : std::numeric_limits<double>::
+                              quiet_NaN();
+                try {
+                    diagnostic_tracker.accept(
+                        release_event
+                            .hit->separated_state,
+                        release_event
+                            .hit->public_hit.state,
+                        event_step_magnitude,
+                        diagnostics,
+                        additional_minimum_radius);
+                } catch (const std::exception& error) {
+                    return terminate(
+                        current_public,
+                        TerminationReason::NonFiniteState,
+                        std::string(
+                            "turning event diagnostics failed: ") +
+                            error.what());
+                }
+                if (crossed_turning_root) {
+                    if (pending_turning->coordinate ==
+                        detail::TurningCoordinate::Radial) {
+                        ++diagnostics.radial_turns;
+                    } else {
+                        ++diagnostics.polar_turns;
+                    }
+                }
+                return terminate(
+                    release_event.hit->public_hit.state,
+                    release_event.reason,
+                    release_event.message,
+                    release_event.hit->public_hit);
+            }
+
             const double release_magnitude =
                 std::fabs(release.mino_step);
             try {

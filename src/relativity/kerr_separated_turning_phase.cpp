@@ -48,6 +48,15 @@ SeparatedDirection direction_from_velocity(double velocity) {
                : SeparatedDirection::Positive;
 }
 
+SeparatedDirection direction_from_phase_velocity(
+    double velocity,
+    SeparatedDirection fallback) {
+    if (velocity == 0.0) {
+        return fallback;
+    }
+    return direction_from_velocity(velocity);
+}
+
 numerics::Dopri5Config<7> phase_dopri_config(
     const KerrBoyerLindquistMetric& metric,
     const KerrSeparatedConfig& config) {
@@ -233,14 +242,79 @@ KerrSeparatedState project_kerr_turning_phase(
         direction_fallback.radial_direction ==
                 SeparatedDirection::Locked
             ? SeparatedDirection::Locked
-            : direction_from_velocity(
-                  phase[kPhaseRadialVelocity]),
+            : direction_from_phase_velocity(
+                  phase[kPhaseRadialVelocity],
+                  direction_fallback.radial_direction),
         direction_fallback.polar_direction ==
                 SeparatedDirection::Locked
             ? SeparatedDirection::Locked
-            : direction_from_velocity(
-                  phase[kPhasePolarVelocity]),
+            : direction_from_phase_velocity(
+                  phase[kPhasePolarVelocity],
+                  direction_fallback.polar_direction),
     };
+}
+
+PhaseSpaceState reconstruct_kerr_turning_phase(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrTurningPhaseState& phase) {
+    const double radius = phase[kPhaseRadius];
+    const double mu = phase[kPhaseMu];
+    if (!std::all_of(
+            phase.begin(),
+            phase.end(),
+            [](double value) {
+                return std::isfinite(value);
+            }) ||
+        std::fabs(mu) >= 1.0) {
+        throw std::domain_error(
+            "turning phase cannot be reconstructed");
+    }
+
+    const double theta = std::acos(mu);
+    PhaseSpaceState result{
+        phase[kPhaseAffine],
+        Contravariant4{
+            Vec4{{
+                phase[kPhaseTime],
+                radius,
+                theta,
+                phase[kPhaseAzimuth],
+            }}},
+        Covariant4{
+            Vec4{{
+                -constants.E,
+                0.0,
+                0.0,
+                constants.Lz,
+            }}},
+    };
+    if (!metric.valid_point(result.x)) {
+        throw std::domain_error(
+            "turning phase is outside Kerr BL");
+    }
+
+    const auto values =
+        KerrSeparatedPotentials(
+            metric.mass(),
+            metric.spin_length(),
+            constants)
+            .evaluate(radius, mu);
+    const double sin_theta =
+        std::sqrt(1.0 - mu * mu);
+    if (values.delta == 0.0 || sin_theta == 0.0) {
+        throw std::domain_error(
+            "turning phase momentum is coordinate-singular");
+    }
+    result.p.v[1] =
+        phase[kPhaseRadialVelocity] / values.delta;
+    result.p.v[2] =
+        -phase[kPhasePolarVelocity] / sin_theta;
+    if (!result.p.v.all_finite()) {
+        throw std::domain_error(
+            "turning phase momentum is non-finite");
+    }
+    return result;
 }
 
 } // namespace solar::relativity::detail
