@@ -214,7 +214,7 @@ git commit -m "feat(relativity): add invariant transfer kernel"
   `RedshiftSample`, `RedshiftResult`, `TransferEvaluationResult`,
   `evaluate_redshift`, and `evaluate_transfer_coefficients`.
 
-- [ ] **Step 1: Write failing frequency and emission tests**
+- [x] **Step 1: Write failing frequency and emission tests**
 
 Use Minkowski metric at the origin, photon
 `p_mu=(-1,1,0,0)`, and boosted emitter
@@ -238,7 +238,7 @@ within `2e-14` relative error. Verify vacuum fluid and vacuum emission both
 return exact zero coefficients, while debug emission returns its configured
 invariant values.
 
-- [ ] **Step 2: Write failing untrusted-boundary tests**
+- [x] **Step 2: Write failing untrusted-boundary tests**
 
 Add local fake models that return or throw:
 
@@ -254,7 +254,7 @@ Add local fake models that return or throw:
 Require the exact `TransferError` and a non-empty message. No exception may
 escape the evaluation boundary.
 
-- [ ] **Step 3: Run both tests and confirm red**
+- [x] **Step 3: Run both tests and confirm red**
 
 Run:
 
@@ -267,7 +267,7 @@ make -j4 \
 Expected: compilation fails because the model headers and evaluation API are
 absent.
 
-- [ ] **Step 4: Implement the public interfaces**
+- [x] **Step 4: Implement the public interfaces**
 
 Declare `FluidSample` and the two virtual interfaces exactly as the design.
 Add:
@@ -311,7 +311,7 @@ TransferEvaluationResult evaluate_transfer_coefficients(
 Forward-declare the model interfaces in `radiative_transfer.h` so L0 values do
 not include model implementation headers.
 
-- [ ] **Step 5: Implement vacuum, grey, and diagnostic emission**
+- [x] **Step 5: Implement vacuum, grey, and diagnostic emission**
 
 Constructors reject negative/non-finite configured coefficients.
 `GreyEmission::coefficients` computes `nu_emit` from
@@ -319,7 +319,7 @@ Constructors reject negative/non-finite configured coefficients.
 zeros. Debug returns fixed invariant coefficients for a valid sample and is
 documented as nonphysical.
 
-- [ ] **Step 6: Implement the trusted evaluation sequence**
+- [x] **Step 6: Implement the trusted evaluation sequence**
 
 In `transfer_evaluation.cpp`:
 
@@ -334,7 +334,7 @@ In `transfer_evaluation.cpp`:
 Use `metric_inner_product` and the existing covector/vector pairing. Never
 renormalize malformed model velocity.
 
-- [ ] **Step 7: Run focused and baseline tests**
+- [x] **Step 7: Run focused and baseline tests**
 
 Run:
 
@@ -349,7 +349,7 @@ make -j4 test
 
 Expected: all required tests pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add include/solar/relativity/radiative_transfer.h \
