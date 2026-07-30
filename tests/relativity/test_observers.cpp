@@ -224,6 +224,92 @@ int main() {
             kerr, horizon_point).error ==
             ObserverError::InvalidMetricPoint);
 
+    const KerrBoyerLindquistMetric ordinary_kerr(1.0, 0.7);
+    const Contravariant4 ordinary_point{
+        Vec4{{0.0, 8.0, 1.1, 0.3}}};
+    const ObserverResult zamo =
+        make_zamo_observer(ordinary_kerr, ordinary_point);
+    check("ordinary Kerr ZAMO exists", bool(zamo));
+    const double zamo_error = tetrad_orthonormality_error(
+        ordinary_kerr, *zamo.frame);
+    check(
+        "ordinary Kerr ZAMO meets strict gate",
+        zamo_error < 1.0e-12);
+    check_near(
+        "ZAMO time component",
+        zamo.frame->tetrad.basis[0].v[0],
+        1.1541093084658278,
+        3.0e-15);
+    check_near(
+        "ZAMO azimuth component",
+        zamo.frame->tetrad.basis[0].v[3],
+        0.0031221612430169197,
+        3.0e-17);
+    check_near(
+        "ZAMO radial leg",
+        zamo.frame->tetrad.basis[1].v[1],
+        0.8697497425245793,
+        2.0e-15);
+    check_near(
+        "ZAMO polar leg",
+        zamo.frame->tetrad.basis[2].v[2],
+        0.12490166184402716,
+        2.0e-16);
+    check_near(
+        "ZAMO azimuthal leg",
+        zamo.frame->tetrad.basis[3].v[3],
+        0.13962018194639417,
+        2.0e-16);
+
+    const Covariant4 zamo_momentum = lower_index(
+        ordinary_kerr.covariant(ordinary_point),
+        zamo.frame->tetrad.basis[0]);
+    check_near(
+        "ZAMO axial angular momentum",
+        zamo_momentum.v[3],
+        0.0,
+        2.0e-17);
+    check(
+        "ZAMO future coordinate time",
+        zamo.frame->tetrad.basis[0].v[0] > 0.0);
+
+    const double far_radius = 1.0e6;
+    const Contravariant4 far_point{
+        Vec4{{0.0, far_radius, 1.1, 0.0}}};
+    const ObserverResult far_zamo =
+        make_zamo_observer(ordinary_kerr, far_point);
+    check("far-field Kerr ZAMO exists", bool(far_zamo));
+    check_near(
+        "far ZAMO time leg approaches inertial time",
+        far_zamo.frame->tetrad.basis[0].v[0],
+        1.0,
+        1.1e-6);
+    check_near(
+        "far ZAMO radial leg approaches one",
+        far_zamo.frame->tetrad.basis[1].v[1],
+        1.0,
+        1.1e-6);
+    check_near(
+        "far ZAMO polar leg has spherical scaling",
+        far_radius *
+            far_zamo.frame->tetrad.basis[2].v[2],
+        1.0,
+        1.0e-12);
+    check_near(
+        "far ZAMO azimuthal leg has spherical scaling",
+        far_radius * std::sin(far_point.v[2]) *
+            far_zamo.frame->tetrad.basis[3].v[3],
+        1.0,
+        2.0e-12);
+
+    const Contravariant4 axis_point{
+        Vec4{{0.0, 8.0, 0.0, 0.0}}};
+    check(
+        "ZAMO rejects BL polar axis",
+        make_zamo_observer(
+            ordinary_kerr, axis_point).error ==
+            ObserverError::InvalidMetricPoint);
+
     std::cout << "\n=== Results: " << passed
               << " passed, " << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;

@@ -8,6 +8,8 @@
 
 namespace solar::relativity {
 
+class KerrBoyerLindquistMetric;
+
 struct Tetrad {
     // basis[a] stores e_(a)^mu.
     std::array<Contravariant4, 4> basis;
@@ -60,6 +62,10 @@ Vec4 coordinate_to_tetrad(
 
 ObserverResult make_static_observer(
     const Metric& metric,
+    const Contravariant4& x);
+
+ObserverResult make_zamo_observer(
+    const KerrBoyerLindquistMetric& metric,
     const Contravariant4& x);
 
 ObserverResult make_arbitrary_observer(
