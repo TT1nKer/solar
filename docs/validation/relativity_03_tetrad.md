@@ -35,7 +35,7 @@ make clean && make && make test
 
 The same observer test was also run in the documented full ASan/UBSan pass.
 Verified code commit:
-`8a6a2533972685f31dea8eae5f361f948546f285`.
+`0f76d411aaf96e8abf31a2a88567c3bf3fedd876`.
 
 ## Inputs
 
@@ -46,11 +46,14 @@ Verified code commit:
 - Kerr ZAMO with `M=1`, `chi=0.7`, `r=8`, `theta=1.1`, `phi=0.3`.
 - Far-field ZAMO at `r=10^6`, plus ergosphere, horizon-margin, degenerate-seed,
   non-unit-velocity, and polar-axis failures.
+- Explicit frame-norm errors near the v3 gate: approximately `5e-13`
+  (accepted) and `5e-11` (rejected).
 
 ## Expected
 
-- All 16 components of `g(e_(a),e_(b))-eta_(a)(b)` remain below the frame
-  gates (`2e-15` for the ordinary Minkowski cases and `1e-12` for the ZAMO).
+- Construction accepts only frames whose maximum over all 16 components of
+  `g(e_(a),e_(b))-eta_(a)(b)` is strictly below the v3 `1e-12` gate.
+- The ordinary exact-fixture assertions remain within `2e-15`.
 - Local/coordinate round trips agree within `2e-15`.
 - ZAMO covariant `p_phi` is zero within `2e-17`.
 - Invalid, non-timelike, or degenerate constructions fail explicitly.
@@ -62,7 +65,7 @@ static tetrad error:             0
 boosted look-at tetrad error:    0
 arbitrary boosted tetrad error:  0
 Kerr ZAMO tetrad error:          3.3306690738754696e-16
-observer assertions:             42 passed, 0 failed
+observer assertions:             44 passed, 0 failed
 ```
 
 All round-trip, handedness, zero-`p_phi`, far-field, and failure-path

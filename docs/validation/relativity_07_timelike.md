@@ -38,7 +38,7 @@ make tests/relativity/test_local_initialization \
 Both executables were included in the full Release and ASan/UBSan runs.
 An 80-decimal independent probe evaluated the `chi=0.5` special radii.
 Verified code commit:
-`8a6a2533972685f31dea8eae5f361f948546f285`.
+`0f76d411aaf96e8abf31a2a88567c3bf3fedd876`.
 
 ## Inputs
 
@@ -50,6 +50,8 @@ Verified code commit:
   `r=8`, `theta=pi/2`.
 - Zero/non-finite photon directions, luminal/superluminal velocities,
   invalid tetrads, non-equatorial circular observers, and unknown orbit sense.
+- Observer/timelike initialization frames immediately inside and outside the
+  strict `1e-12` tetrad gate, plus special-orbit mass-scaling overflow.
 
 ## Expected
 
@@ -64,8 +66,8 @@ Verified code commit:
 ## Actual
 
 ```text
-local-state assertions:             27 passed, 0 failed
-special-orbit assertions:           37 passed, 0 failed
+local-state assertions:             29 passed, 0 failed
+special-orbit assertions:           40 passed, 0 failed
 photon frequency / constraint:       1 / 0
 timelike frequency / constraint:     1.25 / 0
 backward-traced photon frequency:    1

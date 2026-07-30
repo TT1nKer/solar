@@ -8,12 +8,15 @@ from a distant ZAMO.
 
 ## Model boundary
 
-The analytic curve is the infinite-distance vacuum Kerr benchmark. The
-numerical observer is at finite `r=1000M`, so agreement is a convergence test,
-not exact equality. Backward tracing keeps future-directed photon momentum
-and uses a negative affine step. In Boyer–Lindquist coordinates,
-`r=r_+ + 1e-3M` is an explicit capture proxy; it is not a claimed physical
-horizon crossing. `InvalidMetricPoint` is never classified as capture.
+The analytic curve is the infinite-distance vacuum Kerr benchmark. Numerical
+observers are at finite `r=1000M` and `2000M`; their local directions are
+solved so the conserved impact parameter is exactly `alpha=-Lz/E`, rather
+than approximated by a raw local angle. The two-radius comparison remains an
+exterior far-distance convergence check. Backward tracing keeps
+future-directed photon momentum and uses a negative affine step. In
+Boyer–Lindquist coordinates, `r=r_+ + 1e-3M` is an explicit capture proxy; it
+is not a claimed physical horizon crossing. `InvalidMetricPoint` is never
+classified as capture.
 
 ## Reference
 
@@ -38,40 +41,53 @@ make tests/relativity/test_kerr_shadow \
 Both executables were included in the full Release and ASan/UBSan runs.
 An 80-decimal `mpmath` probe independently evaluated the special radii and
 Bardeen endpoints. Verified code commit:
-`8a6a2533972685f31dea8eae5f361f948546f285`.
+`0f76d411aaf96e8abf31a2a88567c3bf3fedd876`.
 
 ## Inputs
 
 - Analytic: Schwarzschild `M=2`; Kerr `M=1`, `chi=+/-0.5`,
-  `i=pi/2`, 65 upper-branch samples; `M=3` scaling; `chi=1e-8`
-  limiting branch; invalid inclinations and sample counts.
-- Numerical: `M=1`, `chi=0.5`, equatorial ZAMO at `r=1000`;
-  screen brackets `[-8,0]` and `[0,8]`; negative initial affine step `-0.5`;
-  `max_step=2`, `max_affine=4000`; inner/escape events at
-  `r_+ + 1e-3` and `1100`.
+  `i=pi/2`, 65 upper-branch samples; inclined `i=pi/3`;
+  near-equatorial and near-axis `i=1e-3,1e-14,1e-15`; `M=3` scaling;
+  `chi=1e-8` limiting branch; invalid inclinations, sample counts, and
+  overflowing Kerr/Schwarzschild mass scaling.
+- Numerical: `M=1`, `chi=0.5`, equatorial ZAMOs at `r=1000,2000`;
+  separate Schwarzschild `chi=0`, `r=1000`; screen brackets `[-8,0]` and
+  `[0,8]`; binary tolerance `2e-7`; negative initial affine step `-0.5`;
+  `max_step=2`, `max_affine=4*r_observer`; inner/escape events at
+  `r_+ + 1e-3` and `1.1*r_observer`.
 
 ## Expected
 
 - Schwarzschild `alpha^2+beta^2=27M^2`.
 - Kerr analytic edges
   `[-4.096266658713869, 6.138155724715452]`.
-- Numerical edge error below `3e-2`.
+- Kerr sampled screen-distance p95 below `2e-4M` and maximum below `1e-3M`.
+- Corresponding edges at `r=1000M` and `2000M` differ by less than `1e-3M`.
+- Schwarzschild critical-radius relative error below `1e-6`.
+- Screen inputs satisfy `alpha=-Lz/E` within `1e-12`.
 - Maximum Hamiltonian and Carter relative errors below `1e-10`.
 - Every initialized photon has positive observer frequency.
 
 ## Actual
 
 ```text
-analytic assertions:                 1320 passed, 0 failed
-ray-trace assertions:                   7 passed, 0 failed
+analytic assertions:                 1340 passed, 0 failed
+ray-trace assertions:                   9 passed, 0 failed
 analytic left/right:                 -4.0962666587138692
-                                       6.1381557247154523
-numerical left/right at r=1000:      -4.09228515625
-                                       6.13232421875
-left/right finite-distance errors:    0.0039815024638691909
-                                       0.0058315059654523438
-maximum Hamiltonian error:            8.329275879277567e-11
-maximum Carter relative error:        2.0809373184981404e-29
+                                       6.1381557247154532
+Kerr left at r=1000 / r=2000:        -4.0962666869163513
+                                      -4.0962666869163513
+Kerr right at r=1000 / r=2000:        6.1381557583808899
+                                       6.1381557583808899
+Kerr sampled p95 / max error:          3.3665437548791033e-08
+                                       3.3665437548791033e-08
+Schwarzschild left/right:             -5.19615238904953
+                                       5.19615238904953
+Schwarzschild target:                  5.196152422706632
+Schwarzschild maximum relative error:  6.4773122988548604e-09
+maximum screen-mapping error:          1.7763568394002505e-15
+maximum Hamiltonian error:             9.6027321368194377e-11
+maximum Carter relative error:         5.9376738197937386e-29
 ```
 
 The independent 80-decimal endpoint oracle differed from the double outputs
@@ -79,10 +95,12 @@ by `9.89e-16` (left) and `2.00e-15` (right).
 
 ## Error
 
-The larger finite-distance edge mismatch was `0.00583151`, or `19.4%` of the
-allowed `0.03`. The Hamiltonian maximum used `83.3%` of its strict gate.
-Horizontal-screen-sign, `xi`-denominator-sign, and invalid-metric-as-capture
-mutations each caused the focused tests to fail.
+The Kerr maximum sampled distance was `3.36654e-8M`, using `0.0168%` of the
+stricter `2e-4M` p95 gate. The Schwarzschild maximum relative root error was
+`6.47731e-9`, using `0.648%` of its gate. The Hamiltonian maximum used
+`96.0%` of its strict gate. Horizontal-screen-sign, `xi`-denominator-sign,
+near-axis residual-division, and invalid-metric-as-capture mutations each
+caused the focused tests to fail.
 
 ## Result
 
@@ -93,14 +111,15 @@ CPU exterior backward-ray benchmark are accepted for Phase 2.
 
 This is not an image renderer, finite-distance analytic shadow, radiative
 transfer model, disk model, or horizon-crossing proof. The numerical check
-samples only the two equatorial horizontal edges at one distant radius and
-one moderate spin. Near-extremal spins, arbitrary inclinations, full
+samples only the two equatorial horizontal edges at two distant radii and one
+moderate spin. Near-extremal spins, numerical off-equatorial boundaries, full
 two-dimensional boundary convergence, and Kerr–Schild capture remain open.
 
 ## Fastest falsification
 
-Run both shadow executables above. Reversing
-`local_phi=-alpha/r_observer` mirrors the recovered edges to approximately
-`[-6.132,4.092]`; changing the `xi` denominator sign breaks both analytic
-edges; classifying `InvalidMetricPoint` as capture breaks the explicit
+Run both shadow executables above. Using
+`local_phi=-alpha/r_observer` violates the conserved screen mapping; changing
+the `xi` denominator sign breaks both analytic edges; restoring
+radius-uniform sampling makes the `i=1e-14` interior alpha wrong by about
+`9.69e-2`; and classifying `InvalidMetricPoint` as capture breaks the explicit
 termination-contract assertion.

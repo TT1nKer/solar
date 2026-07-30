@@ -187,10 +187,10 @@ leg 3 completes the right-handed basis. It is a deterministic first attitude
 law, not transport between events.
 
 Construction succeeds only when the final maximum orthonormality error is
-below `1e-10`. Static construction returns
+strictly below the v3 ordinary-exterior gate `1e-12`. Static construction returns
 `ObserverError::StaticWorldlineNotTimelike` whenever `g_tt>=0`; it does not
 clamp the ergosphere. Arbitrary construction requires a unit timelike
-four-velocity to the same `1e-10` gate and treats the caller's selected
+four-velocity to the same `1e-12` gate and treats the caller's selected
 four-velocity as the time orientation. A general metric has no independent
 coordinate-sign rule that can prove which timelike branch the caller intended.
 
@@ -375,28 +375,46 @@ std::vector<ShadowCriticalPoint> bardeen_shadow_curve(
     std::size_t samples_per_branch);
 ```
 
-For nonzero spin it samples the physical spherical-photon interval and applies
-the v3 `xi(r_p)`, `eta(r_p)`, `alpha`, and `beta` equations. Negative
-radicands larger than a roundoff allowance are omitted; small negative
-radicands are clamped only to zero. Inclination must be finite and strictly
-inside `(0,pi)`.
+For nonzero spin it solves the two inclination-dependent
+`beta(r_p)^2=0` visible tips inside the equatorial spherical-photon interval,
+then samples uniformly between their screen `alpha` values and solves the
+corresponding spherical-photon radius. The solve uses the cancellation-safe
+equation
+`xi_numerator - alpha*a*sin(i)*(r_p-M)=0`; `beta^2` is evaluated as
+`eta+a^2*cos(i)^2-alpha^2*cos(i)^2`, avoiding division by a vanishing
+`sin(i)`. This keeps the curve closed and its interior accurate even for
+near-axis views. The v3 quantities use dimensionless intermediates; only a
+small negative interior radicand within the documented roundoff allowance is
+clamped to zero. Inclination must be finite and strictly inside `(0,pi)`. A
+numerically unresolvable sub-ULP visible interval fails explicitly.
 
 For `|a/M| <= 64*sqrt(epsilon)`, the numerically singular rotating formula is
 replaced by the Schwarzschild circle `alpha^2+beta^2=27M^2`. This branch is
 documented as a double-precision limit, not new physics.
 
 The production API is analytic only. Numerical backward-ray comparison stays
-in `tests/relativity/test_kerr_shadow.cpp`:
+in `tests/relativity/test_kerr_shadow_raytrace.cpp`:
 
-- construct a distant equatorial ZAMO;
-- initialize future-directed incoming photons from local screen directions;
+- construct equatorial ZAMOs at `r=1000M` and `2000M`;
+- lower the observer time and azimuthal tetrad legs and solve the local
+  azimuthal direction so every input screen coordinate satisfies the conserved
+  asymptotic relation `alpha=-Lz/E`;
 - integrate with a negative affine step;
 - classify a safe exterior inner-boundary event as a capture proxy and a
   larger-radius event as escape;
 - binary-search the two horizontal shadow edges;
-- compare their far-distance convergence to the analytic curve.
+- require both Kerr radii to meet the v3 sampled-screen gates and remain
+  mutually stable;
+- require the Schwarzschild CPU critical root to match `3*sqrt(3)M` with
+  relative error below `1e-6`.
 
 The test never maps `InvalidMetricPoint` to `HorizonCrossing`.
+
+The public construction, normalized sampling, and root/formula machinery are
+separated into `kerr_shadow.cpp`, private `kerr_shadow_sampling`, and private
+`kerr_shadow_geometry`, respectively. This keeps numerical stabilization out
+of the public API and preserves the dependency direction
+`construction -> sampling -> geometry`.
 
 ## Correctness and failure gates
 
@@ -464,8 +482,9 @@ and run under AddressSanitizer and UndefinedBehaviorSanitizer.
 
 - Existing `Metric`, canonical state, Hamiltonian, event, and geodesic
   signatures remain source-compatible.
-- The optional Carter evaluator and appended absolute diagnostic default to
-  unavailable, preserving existing non-Kerr behavior.
+- The optional Carter evaluator and absolute diagnostic default to
+  unavailable. The absolute field is appended after all pre-existing
+  diagnostic members so Phase 1 aggregate initializers remain source-compatible.
 - No new dependency is added.
 - The existing Phase 1 branch and draft PR remain unchanged.
 

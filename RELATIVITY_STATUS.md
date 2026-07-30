@@ -2,7 +2,7 @@
 
 CURRENT_PHASE: 2
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: 8a6a2533972685f31dea8eae5f361f948546f285
+LAST_VERIFIED_COMMIT: 0f76d411aaf96e8abf31a2a88567c3bf3fedd876
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0
 LAST_VERIFIED_COMMANDS:
 - `make clean`
@@ -13,8 +13,8 @@ LAST_VERIFIED_COMMANDS:
   tests and `tests/test_integrator`
 - DOPRI, Hamiltonian, RMS, dense-output, invalid-domain, observer, local-state,
   Carter, special-orbit, and analytic/numerical-shadow checks
-- horizontal-screen-sign, Bardeen-`xi`-sign, and
-  invalid-metric-as-capture mutation checks
+- horizontal-screen-sign, Bardeen-`xi`-sign, near-axis interior-stability,
+  and invalid-metric-as-capture mutation checks
 - independent 80-decimal Kerr special-radius and Bardeen-edge probe
 - `git diff --check`
 
@@ -46,14 +46,17 @@ ACTUALLY_COMPLETED:
   monitoring and explicit callback failure semantics.
 - Added analytic Schwarzschild/Kerr ISCO, equatorial photon, marginally bound,
   and circular timelike quantities with spin-relative orbit sense.
-- Added the asymptotic Bardeen critical curve, a stable small-spin
+- Added the asymptotic Bardeen critical curve, inclination-dependent visible
+  tip solves, cancellation-safe screen-alpha sampling, a stable small-spin
   Schwarzschild branch, and finite-domain filtering without fabricated roots.
 - Added an independent distant-ZAMO CPU backward-ray benchmark. It keeps
   momentum future-directed, uses negative affine integration, distinguishes BL
-  chart failure from capture, and recovers both horizontal Kerr shadow edges.
-- Passed 1880/1880 relativity assertions across 22 executables and 67/67
+  chart failure from capture, enforces `alpha=-Lz/E`, recovers both horizontal
+  Kerr shadow edges at `r=1000M` and `2000M`, and verifies the Schwarzschild
+  critical radius.
+- Passed 1912/1912 relativity assertions across 22 executables and 67/67
   fixture-independent legacy assertions in release mode.
-- Passed all 1880 relativity assertions plus the 11-assertion legacy DOPRI
+- Passed all 1912 relativity assertions plus the 11-assertion legacy DOPRI
   adapter test under AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:
@@ -86,12 +89,11 @@ MOST_LIKELY_BUGS:
 - Near-extremal, near-margin, extreme-momentum, and long-duration cases lack a multiprecision reference sweep.
 - Carter monitoring is callback-based and the validated generic trajectory is
   short; long bound-orbit secular drift is not characterized.
-- The analytic off-equatorial Bardeen curve samples the spherical-photon
-  interval rather than solving visible-branch endpoint roots adaptively, so
-  coarse sample counts can under-resolve the tips.
+- Sub-ULP near-axis Bardeen intervals may be rejected explicitly when the two
+  physical tips cannot be distinguished in the platform floating-point type.
 - The CPU shadow benchmark checks only two equatorial horizontal edges at
-  `r=1000M`, `chi=0.5`; it does not validate a full 2D image or near-extremal
-  convergence.
+  `r=1000M` and `2000M`, `chi=0.5`, plus the Schwarzschild critical radius; it
+  does not validate a full 2D image or near-extremal convergence.
 - Circular-orbit formulas are double precision and have not received a dense
   near-extremal sweep against an independent package.
 - Only Apple Clang 16 on macOS arm64 was verified locally.
@@ -116,10 +118,12 @@ FASTEST_WAY_TO_FALSIFY:
 - `./tests/relativity/test_kerr_orbits`: Schwarzschild/Kerr special radii,
   stability/existence, signed spin, and lowered circular-observer invariants.
 - `./tests/relativity/test_kerr_shadow`: Schwarzschild limit, Kerr endpoints,
-  reflection, mass scaling, small-spin stability, and invalid inputs.
+  off-equatorial/near-axis interiors, reflection, mass scaling, small-spin
+  stability, overflow, and invalid inputs.
 - `./tests/relativity/test_kerr_shadow_raytrace`: future-directed
-  negative-affine rays, explicit capture/escape classification, both Bardeen
-  edge comparisons, and Hamiltonian/Carter gates.
+  negative-affine rays, exact conserved screen mapping, explicit
+  capture/escape classification, two-radius Kerr and Schwarzschild boundary
+  comparisons, and Hamiltonian/Carter gates.
 - `./tests/relativity/test_geodesics_kerr`: ordinary Kerr constraint, exact
   monitored E/Lz, Carter drift, denominator semantics, and callback failures.
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.

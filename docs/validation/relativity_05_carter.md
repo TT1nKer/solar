@@ -36,7 +36,7 @@ make tests/relativity/test_kerr_constants \
 
 Both executables were included in the full Release and ASan/UBSan runs.
 Verified code commit:
-`8a6a2533972685f31dea8eae5f361f948546f285`.
+`0f76d411aaf96e8abf31a2a88567c3bf3fedd876`.
 
 ## Inputs
 

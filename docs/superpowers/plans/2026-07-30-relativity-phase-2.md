@@ -28,7 +28,8 @@ Hamiltonian geodesic integrator, and standalone executable tests.
   negative affine step.
 - Observer frequency is `nu=-p_mu u_obs^mu`.
 - Locally initialized photon momentum is normalized to `nu_obs=1`.
-- Tetrad and Hamiltonian normalized errors must remain below `1e-10`.
+- Tetrad orthonormality must remain below `1e-12`; Hamiltonian normalized
+  errors must remain below `1e-10`.
 - Carter relative error uses `abs(Q-Q0)/max(1,abs(Q0))`; absolute error is also
   reported.
 - Static observers do not exist where `g_tt>=0`.
@@ -218,7 +219,7 @@ for (const spatial_leg : completed_spatial_legs) {
 
 Normalize only for a finite positive norm. Build the right-handed spatial
 determinant explicitly. Re-evaluate all 16 tetrad products and reject error
-above `1e-10`.
+greater than or equal to `1e-12`.
 
 Static observer uses `u^t=1/sqrt(-g_tt)` and coordinate `r`, `theta`, `phi`
 seeds. Check `g_tt<0` before the square root.
@@ -750,10 +751,16 @@ Expected: compilation fails because `kerr_shadow.h` is absent.
 
 - [x] **Step 3: Implement the analytic curve**
 
-For rotating Kerr, sample the closed interval between the relative-spin
-prograde and retrograde photon radii. Compute `xi`, `eta`, and the beta
-radicand in dimensionless long-double intermediates, then restore mass scale.
-Clamp a negative radicand only when:
+For rotating Kerr, bracket the zero of the `xi` numerator, use it as a
+positive-`beta^2` interior point, and solve the two inclination-dependent
+`beta^2=0` tips inside the relative-spin prograde and retrograde photon
+radii. Compute their stable screen `alpha` coordinates, sample uniformly in
+`alpha`, and solve each interior spherical-photon radius from
+`xi_numerator-alpha*a*sin(i)*(r_p-M)=0`. Evaluate
+`beta^2=eta+a^2*cos(i)^2-alpha^2*cos(i)^2` so the interior does not divide
+rounded `xi` by a near-zero `sin(i)`. Keep both tips even for
+`samples_per_branch=2`. Compute all intermediates dimensionlessly, then
+restore mass scale. Clamp a negative interior radicand only when:
 
 ```cpp
 radicand >= -128.0L *
@@ -762,7 +769,13 @@ radicand >= -128.0L *
 ```
 
 Return upper branch in increasing photon radius and lower branch in reverse,
-without duplicating zero-beta endpoints.
+without duplicating zero-beta endpoints. Validate independent `i=pi/3`,
+near-equatorial, `i=1e-3`, `i=1e-14`, and sub-ULP near-axis fixtures.
+Unresolvable sub-ULP intervals must fail explicitly rather than return
+distorted coordinates. Reject non-finite Kerr and Schwarzschild scaled output
+instead of returning infinities. Keep public construction, normalized
+sampling, and root/formula code in separate private modules with dependency
+direction `construction -> sampling -> geometry`.
 
 - [x] **Step 4: Verify GREEN**
 
@@ -785,7 +798,7 @@ git commit -m "feat: add analytic Kerr shadow curve"
 ### Task 8: CPU backward-ray shadow cross-check and Phase 2 gate
 
 **Files:**
-- Modify: `tests/relativity/test_kerr_shadow.cpp`
+- Create: `tests/relativity/test_kerr_shadow_raytrace.cpp`
 - Create: `docs/validation/relativity_03_tetrad.md`
 - Create: `docs/validation/relativity_05_carter.md`
 - Create: `docs/validation/relativity_06_shadow.md`
@@ -799,12 +812,17 @@ git commit -m "feat: add analytic Kerr shadow curve"
 
 - [x] **Step 1: Add the numerical shadow acceptance benchmark**
 
-In `test_kerr_shadow.cpp`, use `M=1`, `chi=0.5`, equatorial observer radius
-`r_obs=1000`. Build a ZAMO. For horizontal Bardeen screen coordinate
-`alpha`, initialize:
+In `test_kerr_shadow_raytrace.cpp`, use `M=1`, `chi=0.5`, equatorial observer
+radii `r_obs=1000` and `2000`. Build a ZAMO. Lower its time and azimuthal
+tetrad legs and define:
 
 ```cpp
-const double local_phi = -alpha / r_obs;
+const double E0 = -u_covariant[0];
+const double L0 =  u_covariant[3];
+const double E3 = -e_phi_covariant[0];
+const double L3 =  e_phi_covariant[3];
+const double local_phi =
+    (-L0 - alpha * E0) / (L3 + alpha * E3);
 const Vec3 local_direction{{
     std::sqrt(1.0 - local_phi * local_phi),
     0.0,
@@ -812,8 +830,10 @@ const Vec3 local_direction{{
 }};
 ```
 
-This is the future photon arriving radially outward at the camera. Integrate
-with a negative affine step and two explicit events:
+This is the future photon arriving radially outward at the camera and enforces
+the asymptotic screen contract `alpha=-Lz/E` at finite observer radius.
+Require the measured mapping error below `1e-12`. Integrate with a negative
+affine step and two explicit events:
 
 ```cpp
 const double inner_radius =
@@ -840,23 +860,28 @@ GeodesicEvent escape{
 };
 ```
 
-Use `max_step=2`, `max_affine=4000`, Hamiltonian tolerance `1e-10`, and Carter
-monitoring. Classify only inner event index 0 as captured and escape index 1
-as escaped. Any metric failure, root failure, constraint failure, or affine
-limit fails the benchmark.
+Use `max_step=2`, `max_affine=4*r_obs`, Hamiltonian tolerance `1e-10`, and
+Carter monitoring. Classify only inner event index 0 as captured and escape
+index 1 as escaped. Any metric failure, root failure, constraint failure, or
+affine limit fails the benchmark.
 
 Binary-search left bracket `[-8,0]` and right bracket `[0,8]` to screen
-tolerance `1e-3`. Require:
+tolerance `2e-7`. Require:
 
 ```text
-abs(numerical_left  - analytic_left)  < 3e-2
-abs(numerical_right - analytic_right) < 3e-2
-max Hamiltonian error                < 1e-10
-max Carter relative error            < 1e-10
+Kerr sampled screen distance p95      < 2e-4 M
+Kerr sampled screen distance max      < 1e-3 M
+r=1000 vs r=2000 edge difference      < 1e-3 M
+Schwarzschild b_c root relative error  < 1e-6
+max Hamiltonian error                  < 1e-10
+max Carter relative error              < 1e-10
 ```
 
-Also require every initialized ray to have positive observer frequency while
-being integrated backward with negative affine steps.
+The sampled Kerr maximum is required below `2e-4`, which satisfies both v3
+percentile and maximum gates for this four-edge sample. Run a separate
+`chi=0`, `r_obs=1000` benchmark against `b_c=3*sqrt(3)M`. Also require every
+initialized ray to have positive observer frequency while being integrated
+backward with negative affine steps.
 
 Mutation target: past-directed camera momentum, wrong screen horizontal sign,
 mapping `InvalidMetricPoint` to capture, or a wrong analytic boundary must
@@ -865,8 +890,8 @@ fail.
 - [x] **Step 2: Run the independent acceptance benchmark**
 
 ```bash
-make tests/relativity/test_kerr_shadow
-./tests/relativity/test_kerr_shadow
+make tests/relativity/test_kerr_shadow_raytrace
+./tests/relativity/test_kerr_shadow_raytrace
 ```
 
 This task adds no production API: Tasks 1-7 were each developed through RED
@@ -879,8 +904,8 @@ non-event outcome is a failure, not a skip.
 
 If the first run exposes a defect, reproduce it with the narrowest failing
 assertion before changing production code. Do not loosen the `1e-10`
-Hamiltonian/Carter gates. Finite-distance edge tolerance may be tightened
-after a two-radius convergence sweep, but may not be enlarged beyond `3e-2`.
+Hamiltonian/Carter gates, the v3 Kerr sampled-screen gates, or the
+Schwarzschild `1e-6` root gate.
 
 - [x] **Step 4: Run focused Phase 2 tests**
 
