@@ -62,6 +62,27 @@ ThinDiskRecordResult ThinDiskCrossingRecorder::record(
         return ThinDiskRecordResult{
             TransferError::None, false, true, {}};
     }
+    if (!std::isfinite(photon.affine) ||
+        !photon.x.v.all_finite() ||
+        !photon.p.v.all_finite()) {
+        return record_failure(
+            TransferError::NonFiniteInput,
+            closed_,
+            "surface photon phase-space state must be finite");
+    }
+    if (!std::isfinite(observer_frequency) ||
+        observer_frequency <= 0.0) {
+        return record_failure(
+            TransferError::InvalidObserverFrequency,
+            closed_,
+            "observer frequency must be finite and positive");
+    }
+    if (!metric.valid_point(photon.x)) {
+        return record_failure(
+            TransferError::InvalidMetricPoint,
+            closed_,
+            "surface photon position is outside the metric domain");
+    }
 
     FluidSample fluid;
     try {

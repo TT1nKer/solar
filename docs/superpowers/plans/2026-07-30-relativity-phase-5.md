@@ -778,7 +778,7 @@ git commit -m "feat(relativity): add thin-disk surface transfer"
 - Produces: measured acceptance output and tests sensitive to the two highest
   risk mutations.
 
-- [ ] **Step 1: Add deterministic measured summaries**
+- [x] **Step 1: Add deterministic measured summaries**
 
 Print only final maximum values:
 
@@ -794,7 +794,7 @@ max_surface_composition_error
 
 Use `std::setprecision(17)` so the validation report records real values.
 
-- [ ] **Step 2: Run the five focused executables**
+- [x] **Step 2: Run the five focused executables**
 
 Run:
 
@@ -808,19 +808,19 @@ Run:
 
 Expected: every assertion passes and each maximum is below its design gate.
 
-- [ ] **Step 3: Perform the backward-sign mutation**
+- [x] **Step 3: Perform the backward-sign mutation**
 
 Temporarily change `exp(-tau)`/`expm1(-tau)` to the wrong positive exponent.
 Rebuild and run `test_radiative_transfer` and `test_thin_disk`; both must fail.
 Restore with `apply_patch`, rebuild, and require green.
 
-- [ ] **Step 4: Perform the chart-velocity mutation**
+- [x] **Step 4: Perform the chart-velocity mutation**
 
 Temporarily replace `u_KS=J u_BL` with a component copy. Rebuild and run
 `test_fluid_models` and `test_thin_disk`; both must fail. Restore with
 `apply_patch`, rebuild, and require green.
 
-- [ ] **Step 5: Self-audit architecture and failure meaning**
+- [x] **Step 5: Self-audit architecture and failure meaning**
 
 Verify with focused searches and diff review:
 
@@ -835,7 +835,7 @@ Verify with focused searches and diff review:
 - files over the review signal still own one cohesive responsibility;
 - no unrelated edit, stale status item, dead code, or fallback remains.
 
-- [ ] **Step 6: Commit measured test improvements if changed**
+- [x] **Step 6: Commit measured test improvements if changed**
 
 ```bash
 git add tests/relativity/test_radiative_transfer.cpp \

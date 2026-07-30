@@ -4,6 +4,7 @@
 #include "solar/relativity/kerr_orbits.h"
 #include "solar/relativity/kerr_schild_metric.h"
 #include "solar/relativity/local_initialization.h"
+#include "solar/relativity/minkowski_metric.h"
 #include "solar/relativity/spacetime_algebra.h"
 #include "solar/relativity/thin_disk.h"
 
@@ -19,7 +20,8 @@ namespace {
 
 int passed = 0;
 int failed = 0;
-double maximum_surface_error = 0.0;
+double max_surface_normal_error = 0.0;
+double max_surface_composition_error = 0.0;
 
 void check(
     const char* name,
@@ -41,8 +43,20 @@ void check_near(
     double expected,
     double tolerance) {
     const double error = normalized_error(actual, expected);
-    maximum_surface_error =
-        std::max(maximum_surface_error, error);
+    check(
+        name,
+        std::isfinite(actual) && error <= tolerance,
+        error);
+}
+
+void check_near_and_record(
+    const char* name,
+    double actual,
+    double expected,
+    double tolerance,
+    double& maximum_error) {
+    const double error = normalized_error(actual, expected);
+    maximum_error = std::max(maximum_error, error);
     check(
         name,
         std::isfinite(actual) && error <= tolerance,
@@ -138,21 +152,24 @@ void check_two_sheet_composition(
             recorder.crossings()[1].image_order == 1 &&
             recorder.crossings()[0].affine == -1.0 &&
             recorder.crossings()[1].affine == -2.0);
-    check_near(
+    check_near_and_record(
         "two-sheet specific intensity uses foreground transmission",
         recorder.observed().specific_intensity,
         0.3984375,
-        3.0e-13);
-    check_near(
+        3.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "two-sheet bolometric intensity uses foreground transmission",
         recorder.observed().bolometric_intensity,
         0.322265625,
-        3.0e-13);
-    check_near(
+        3.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "two-sheet transmission is multiplicative",
         recorder.observed().transmission,
         0.25,
-        3.0e-13);
+        3.0e-13,
+        max_surface_composition_error);
 }
 
 void check_crossing_bound_and_vacuum(
@@ -252,16 +269,18 @@ void check_chart_agreement(
         bl_recorder.crossings().front();
     const ThinDiskCrossing& ks =
         ks_recorder.crossings().front();
-    check_near(
+    check_near_and_record(
         "BL and KS disk radii agree",
         ks.disk_radius,
         bl.disk_radius,
-        1.0e-10);
-    check_near(
+        1.0e-10,
+        max_surface_composition_error);
+    check_near_and_record(
         "BL and KS redshifts agree",
         ks.redshift_g,
         bl.redshift_g,
-        1.0e-10);
+        1.0e-10,
+        max_surface_composition_error);
 
     const Vec4 expected_ks_normal = multiply(
         transform.boyer_lindquist_to_kerr_schild_jacobian(
@@ -275,28 +294,30 @@ void check_chart_agreement(
                 ks.surface_normal.v[component] -
                 expected_ks_normal[component]));
     }
-    maximum_surface_error = std::max(
-        maximum_surface_error, normal_component_error);
+    max_surface_normal_error = std::max(
+        max_surface_normal_error, normal_component_error);
     check(
         "KS normal is the full contravariant BL transform",
         normal_component_error <= 1.0e-10,
         normal_component_error);
-    check_near(
+    check_near_and_record(
         "KS normal is unit spacelike",
         metric_inner_product(
             ks_metric.covariant(ks.position),
             ks.surface_normal,
             ks.surface_normal),
         1.0,
-        1.0e-10);
-    check_near(
+        1.0e-10,
+        max_surface_normal_error);
+    check_near_and_record(
         "KS normal remains orthogonal to emitter",
         metric_inner_product(
             ks_metric.covariant(ks.position),
             ks.surface_normal,
             ks.emitter_four_velocity),
         0.0,
-        1.0e-10);
+        1.0e-10,
+        max_surface_normal_error);
     check(
         "BL and KS face classification agrees",
         bl.front_facing == ks.front_facing);
@@ -376,6 +397,88 @@ void check_invalid_configuration(
             overflow.crossings().empty());
 }
 
+void check_runtime_failure_meaning(
+    const KerrBoyerLindquistMetric& metric,
+    const Contravariant4& point) {
+    ThinDiskCrossingRecorder recorder(
+        ThinDiskRecorderConfig{
+            DiskOpacityMode::SemiTransparent, 8},
+        AnalyticCircularDiskFluid(disk_config()),
+        ThinDiskSurfaceEmission(1.0, 1.0, 0.2));
+    const PhaseSpaceState valid_photon =
+        photon_with_emitter_frequency(
+            metric, point, 2.0);
+    const ThinDiskRecordResult accepted =
+        recorder.record(metric, valid_photon, 1.0);
+    const ThinDiskObservedState before_failure =
+        recorder.observed();
+
+    PhaseSpaceState non_finite = valid_photon;
+    non_finite.x.v[0] =
+        std::numeric_limits<double>::quiet_NaN();
+    const ThinDiskRecordResult non_finite_result =
+        recorder.record(metric, non_finite, 1.0);
+    check(
+        "non-finite surface photon has context error",
+        !non_finite_result &&
+            non_finite_result.error ==
+                TransferError::NonFiniteInput);
+
+    PhaseSpaceState invalid_point = valid_photon;
+    invalid_point.x.v[1] = 1.0;
+    const ThinDiskRecordResult invalid_point_result =
+        recorder.record(metric, invalid_point, 1.0);
+    check(
+        "invalid surface metric point has context error",
+        !invalid_point_result &&
+            invalid_point_result.error ==
+                TransferError::InvalidMetricPoint);
+
+    const ThinDiskRecordResult invalid_frequency =
+        recorder.record(metric, valid_photon, 0.0);
+    check(
+        "invalid surface observer frequency is explicit",
+        !invalid_frequency &&
+            invalid_frequency.error ==
+                TransferError::InvalidObserverFrequency);
+    check(
+        "failed crossings preserve accepted state",
+        accepted && accepted.recorded &&
+            recorder.crossings().size() == 1 &&
+            recorder.observed().specific_intensity ==
+                before_failure.specific_intensity &&
+            recorder.observed().bolometric_intensity ==
+                before_failure.bolometric_intensity &&
+            recorder.observed().transmission ==
+                before_failure.transmission);
+
+    const KerrBoyerLindquistMetric mismatched_metric(
+        1.0, 0.4);
+    const ThinDiskRecordResult mismatched =
+        recorder.record(
+            mismatched_metric,
+            photon_with_emitter_frequency(
+                mismatched_metric, point, 2.0),
+            1.0);
+    check(
+        "mismatched Kerr parameters remain fluid failure",
+        !mismatched &&
+            mismatched.error ==
+                TransferError::InvalidFluidSample);
+
+    const MinkowskiMetric minkowski;
+    PhaseSpaceState flat_photon = valid_photon;
+    flat_photon.x =
+        Contravariant4{Vec4{{0.0, 8.0, 0.0, 0.0}}};
+    const ThinDiskRecordResult unsupported =
+        recorder.record(minkowski, flat_photon, 1.0);
+    check(
+        "unsupported metric remains fluid failure",
+        !unsupported &&
+            unsupported.error ==
+                TransferError::InvalidFluidSample);
+}
+
 } // namespace
 
 int main() {
@@ -410,31 +513,36 @@ int main() {
 
     const ThinDiskCrossing& crossing =
         recorder.crossings().front();
-    check_near(
+    check_near_and_record(
         "surface emitter frequency",
         crossing.emitter_frequency,
         2.0,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "surface redshift",
         crossing.redshift_g,
         0.5,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "surface observed temperature uses g",
         crossing.observed_temperature,
         4.0,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "surface specific intensity uses g cubed",
         crossing.observed_specific_intensity,
         0.75,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "surface bolometric intensity uses g fourth",
         crossing.observed_bolometric_intensity,
         0.625,
-        2.0e-13);
+        2.0e-13,
+        max_surface_composition_error);
     check(
         "first crossing has image order zero",
         crossing.image_order == 0);
@@ -453,37 +561,42 @@ int main() {
         2.0e-14);
 
     const Mat4 covariant = metric.covariant(point);
-    check_near(
+    check_near_and_record(
         "surface normal is unit spacelike",
         metric_inner_product(
             covariant,
             crossing.surface_normal,
             crossing.surface_normal),
         1.0,
-        1.0e-10);
-    check_near(
+        1.0e-10,
+        max_surface_normal_error);
+    check_near_and_record(
         "surface normal is orthogonal to emitter",
         metric_inner_product(
             covariant,
             crossing.surface_normal,
             crossing.emitter_four_velocity),
         0.0,
-        1.0e-10);
-    check_near(
+        1.0e-10,
+        max_surface_normal_error);
+    check_near_and_record(
         "opaque observed specific intensity is full source",
         recorder.observed().specific_intensity,
         0.75,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "opaque observed bolometric intensity is full source",
         recorder.observed().bolometric_intensity,
         0.625,
-        2.0e-13);
-    check_near(
+        2.0e-13,
+        max_surface_composition_error);
+    check_near_and_record(
         "opaque crossing blocks farther surfaces",
         recorder.observed().transmission,
         0.0,
-        0.0);
+        0.0,
+        max_surface_composition_error);
 
     const ObserverResult expected_emitter =
         make_equatorial_circular_observer(
@@ -524,10 +637,13 @@ int main() {
     check_crossing_bound_and_vacuum(metric, point);
     check_chart_agreement(metric, point);
     check_invalid_configuration(metric, point);
+    check_runtime_failure_meaning(metric, point);
 
     std::cout.precision(17);
-    std::cout << "  max_surface_error="
-              << maximum_surface_error << '\n';
+    std::cout << "  max_surface_normal_error="
+              << max_surface_normal_error
+              << " max_surface_composition_error="
+              << max_surface_composition_error << '\n';
     std::cout << "\n=== Results: " << passed
               << " passed, " << failed << " failed ===\n";
     return failed == 0 ? 0 : 1;
