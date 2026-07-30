@@ -642,7 +642,7 @@ git commit -m "test(relativity): crosscheck BL and Kerr-Schild flows"
   tetrad validation.
 - Produces: the Phase 4 horizon-to-interior acceptance proof.
 
-- [ ] **Step 1: Write the two-segment plunge**
+- [x] **Step 1: Write the two-segment plunge**
 
 Initialize a unit-mass ingoing timelike BL state from a safe exterior local
 observer, transform it to KS, and configure:
@@ -662,7 +662,7 @@ First integrate with only the outer-horizon event. Require
 momentum, metric, inverse, affine, and Hamiltonian norm, constraint
 `<1e-10`, and E/Lz drift `<1e-12`.
 
-- [ ] **Step 2: Run the new horizon acceptance test**
+- [x] **Step 2: Run the new horizon acceptance test**
 
 Run:
 
@@ -675,14 +675,14 @@ Expected: the executable either passes immediately or identifies the first
 measured horizon, constraint, invariant, observer, or continuation failure.
 This composes already test-driven units, so a first-run pass is acceptable.
 
-- [ ] **Step 3: Validate a freely falling horizon observer**
+- [x] **Step 3: Validate a freely falling horizon observer**
 
 Raise the event momentum with the KS inverse metric, normalize it as the
 observer four-velocity, and call `make_arbitrary_observer` with three
 linearly independent spatial seeds. Require finite tetrad components and
 maximum orthonormality error `<1e-12`.
 
-- [ ] **Step 4: Restart the exact event state to the interior cutoff**
+- [x] **Step 4: Restart the exact event state to the interior cutoff**
 
 Call `integrate` again using the exact first segment final state and only
 `make_kerr_schild_interior_cutoff_event(metric, 0.0, tolerance)`. Require
@@ -690,7 +690,7 @@ Call `integrate` again using the exact first segment final state and only
 affine/proper time, and continuity of the initial second-segment state with
 the first endpoint. Do not nudge or clamp the horizon state.
 
-- [ ] **Step 5: Correct owning code and run focused horizon tests**
+- [x] **Step 5: Correct owning code and run focused horizon tests**
 
 If a gate fails, trace it to metric values, derivatives, callbacks, event
 localization, or observer construction and correct only that owner. Run:
@@ -704,7 +704,7 @@ localization, or observer construction and correct only that owner. Run:
 
 Expected: all pass with the measured horizon/interior gates printed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity src/relativity \
