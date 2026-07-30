@@ -226,6 +226,21 @@ int main() {
                          inner, -std::numeric_limits<double>::infinity()),
                      0.5 * pi))
              .valid);
+    const double sub_photon_radius =
+        metric.outer_horizon_radius() + 0.1;
+    const Contravariant4 sub_photon_bl =
+        bl_point(sub_photon_radius, 0.5 * pi);
+    check(
+        "disk treats sub-photon-orbit BL point as vacuum",
+        !disk.sample(metric, sub_photon_bl).valid);
+    const KerrChartTransform sub_photon_transform(2.0, 0.5);
+    check(
+        "disk treats sub-photon-orbit KS point as vacuum",
+        !disk.sample(
+                 KerrSchildCartesianMetric(2.0, 0.5),
+                 sub_photon_transform.position_to_kerr_schild(
+                     sub_photon_bl))
+             .valid);
     check(
         "disk rejects radius above outer edge as vacuum",
         !disk.sample(

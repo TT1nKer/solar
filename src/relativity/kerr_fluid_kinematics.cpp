@@ -48,16 +48,11 @@ Contravariant4 apply_jacobian(
 
 } // namespace
 
-KerrFluidPoint evaluate_kerr_circular_fluid_point(
+KerrFluidLocation locate_kerr_fluid_point(
     const Metric& metric,
     const Contravariant4& x,
     double mass_M,
-    double spin_chi,
-    OrbitSense sense) {
-    if (!is_valid_orbit_sense(sense)) {
-        throw std::invalid_argument(
-            "Kerr fluid orbit sense is not recognized");
-    }
+    double spin_chi) {
     if (!x.v.all_finite() || !metric.valid_point(x)) {
         throw std::domain_error(
             "Kerr fluid point is outside the metric domain");
@@ -75,7 +70,6 @@ KerrFluidPoint evaluate_kerr_circular_fluid_point(
     KerrBoyerLindquistMetric model_bl_metric(
         mass_M, spin_chi);
     Contravariant4 bl_position;
-    bool transform_to_ks = false;
     if (bl_metric != nullptr) {
         require_matching_parameters(
             bl_metric->mass(),
@@ -93,14 +87,32 @@ KerrFluidPoint evaluate_kerr_circular_fluid_point(
             mass_M, spin_chi);
         bl_position =
             transform.position_to_boyer_lindquist(x);
-        transform_to_ks = true;
     }
 
     if (!model_bl_metric.valid_point(bl_position)) {
         throw std::domain_error(
             "Kerr fluid BL point is outside the metric domain");
     }
-    const double radius = bl_position.v[1];
+    return KerrFluidLocation{
+        bl_position,
+        bl_position.v[1],
+        bl_position.v[2],
+        std::cos(bl_position.v[2]),
+    };
+}
+
+Contravariant4 evaluate_kerr_circular_four_velocity(
+    const Metric& metric,
+    const Contravariant4& x,
+    const KerrFluidLocation& location,
+    double mass_M,
+    double spin_chi,
+    OrbitSense sense) {
+    if (!is_valid_orbit_sense(sense)) {
+        throw std::invalid_argument(
+            "Kerr fluid orbit sense is not recognized");
+    }
+    const double radius = location.radius;
     const double normalized_radius = radius / mass_M;
     const double sign = rotation_sign(spin_chi, sense);
     const double angular_velocity =
@@ -110,7 +122,8 @@ KerrFluidPoint evaluate_kerr_circular_fluid_point(
               std::sqrt(normalized_radius) +
           sign * spin_chi));
     const Mat4 bl_covariant =
-        model_bl_metric.covariant(bl_position);
+        KerrBoyerLindquistMetric(mass_M, spin_chi)
+            .covariant(location.boyer_lindquist_position);
     const double normalization_squared =
         -(bl_covariant[0][0] +
           2.0 * angular_velocity *
@@ -130,13 +143,14 @@ KerrFluidPoint evaluate_kerr_circular_fluid_point(
     bl_velocity.v[3] =
         angular_velocity * bl_velocity.v[0];
     Contravariant4 caller_velocity = bl_velocity;
-    if (transform_to_ks) {
+    if (dynamic_cast<const KerrSchildCartesianMetric*>(
+            &metric) != nullptr) {
         const KerrChartTransform transform(
             mass_M, spin_chi);
         caller_velocity = apply_jacobian(
             transform
                 .boyer_lindquist_to_kerr_schild_jacobian(
-                    bl_position),
+                    location.boyer_lindquist_position),
             bl_velocity);
     }
 
@@ -152,13 +166,7 @@ KerrFluidPoint evaluate_kerr_circular_fluid_point(
             "analytic Kerr circular velocity failed validation");
     }
 
-    return KerrFluidPoint{
-        bl_position,
-        caller_velocity,
-        radius,
-        bl_position.v[2],
-        std::cos(bl_position.v[2]),
-    };
+    return caller_velocity;
 }
 
 } // namespace solar::relativity::detail
