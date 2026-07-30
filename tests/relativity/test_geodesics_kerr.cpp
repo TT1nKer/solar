@@ -1,10 +1,15 @@
 #include "solar/relativity/geodesic_integrator.h"
 #include "solar/relativity/kerr_bl_metric.h"
+#include "solar/relativity/kerr_constants.h"
+#include "solar/relativity/local_initialization.h"
 #include "solar/relativity/minkowski_metric.h"
+#include "solar/relativity/observer.h"
 
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
 
 using namespace solar::relativity;
 
@@ -71,6 +76,9 @@ int main() {
     check("Kerr Carter diagnostic remains unavailable",
           std::isnan(
               monitored.diagnostics.max_carter_rel_error));
+    check("Kerr Carter absolute diagnostic remains unavailable",
+          std::isnan(
+              monitored.diagnostics.max_carter_abs_error));
     check("ordinary Kerr Hamiltonian gate",
           monitored.diagnostics.max_constraint_error < 1.0e-10);
 
@@ -93,6 +101,9 @@ int main() {
     check("unmonitored Carter is unavailable",
           std::isnan(
               unmonitored.diagnostics.max_carter_rel_error));
+    check("unmonitored Carter absolute error is unavailable",
+          std::isnan(
+              unmonitored.diagnostics.max_carter_abs_error));
 
     auto zero_lz_config = null_config(1.0);
     zero_lz_config.monitor_lz = true;
@@ -105,10 +116,115 @@ int main() {
           std::isnan(
               zero_lz.diagnostics.max_energy_rel_error));
 
+    const Contravariant4 generic_position{
+        Vec4{{0.0, 8.0, 1.1, 0.0}}};
+    const ObserverResult generic_zamo =
+        make_zamo_observer(kerr, generic_position);
+    check("generic Kerr ray ZAMO exists", bool(generic_zamo));
+    const InitialStateResult generic_photon =
+        initialize_local_photon(
+            kerr,
+            *generic_zamo.frame,
+            Vec3{{0.3, 0.4, 0.5}});
+    check("generic Kerr photon initializes", bool(generic_photon));
+
+    auto carter_config =
+        GeodesicIntegrationConfig::cpu_reference(
+            GeodesicKind::Null,
+            1.0,
+            0.02,
+            0.1,
+            5.0);
+    carter_config.monitor_energy = true;
+    carter_config.monitor_lz = true;
+    carter_config.carter_evaluator =
+        [&kerr](const PhaseSpaceState& state) {
+            return evaluate_kerr_constants(
+                kerr, state, GeodesicKind::Null).Q;
+        };
+    const GeodesicIntegrationResult carter_monitored =
+        kerr_integrator.integrate(
+            *generic_photon.state, carter_config);
+    check(
+        "generic Kerr ray reaches affine limit",
+        carter_monitored.diagnostics.reason ==
+            TerminationReason::MaxAffine);
+    check(
+        "generic Kerr Hamiltonian gate",
+        carter_monitored.diagnostics.max_constraint_error <
+            1.0e-10);
+    check(
+        "generic Kerr Carter relative gate",
+        std::isfinite(
+            carter_monitored.diagnostics.max_carter_rel_error) &&
+        carter_monitored.diagnostics.max_carter_rel_error <
+            1.0e-10);
+    check(
+        "generic Kerr Carter absolute gate",
+        std::isfinite(
+            carter_monitored.diagnostics.max_carter_abs_error) &&
+        carter_monitored.diagnostics.max_carter_abs_error <
+            1.0e-10);
+
+    auto synthetic_config = null_config(2.0);
+    synthetic_config.carter_evaluator =
+        [](const PhaseSpaceState& state) {
+            return 1.0e-6 + 1.0e-9 * state.affine;
+        };
+    const GeodesicIntegrationResult synthetic =
+        minkowski_integrator.integrate(
+            photon, synthetic_config);
+    check_near(
+        "small invariant uses v3 max-one denominator",
+        synthetic.diagnostics.max_carter_rel_error,
+        2.0e-9,
+        2.0e-17);
+    check_near(
+        "small invariant absolute error reported",
+        synthetic.diagnostics.max_carter_abs_error,
+        2.0e-9,
+        2.0e-17);
+
+    auto non_finite_monitor_config = null_config(1.0);
+    non_finite_monitor_config.carter_evaluator =
+        [](const PhaseSpaceState&) {
+            return std::numeric_limits<double>::quiet_NaN();
+        };
+    const GeodesicIntegrationResult non_finite_monitor =
+        minkowski_integrator.integrate(
+            photon, non_finite_monitor_config);
+    check(
+        "non-finite invariant evaluator fails explicitly",
+        non_finite_monitor.diagnostics.reason ==
+            TerminationReason::NonFiniteState);
+    check(
+        "non-finite invariant evaluator accepts no step",
+        non_finite_monitor.diagnostics.accepted_steps == 0);
+
+    auto throwing_monitor_config = null_config(1.0);
+    throwing_monitor_config.carter_evaluator =
+        [](const PhaseSpaceState&) -> double {
+            throw std::domain_error("test invariant failure");
+        };
+    const GeodesicIntegrationResult throwing_monitor =
+        minkowski_integrator.integrate(
+            photon, throwing_monitor_config);
+    check(
+        "throwing invariant evaluator fails explicitly",
+        throwing_monitor.diagnostics.reason ==
+            TerminationReason::NonFiniteState);
+    check(
+        "throwing invariant evaluator accepts no step",
+        throwing_monitor.diagnostics.accepted_steps == 0);
+
     std::cout << std::setprecision(17)
               << "  kerr_initial_H=" << hamiltonian(kerr, ordinary)
               << " kerr_max_constraint="
               << monitored.diagnostics.max_constraint_error
+              << " carter_rel="
+              << carter_monitored.diagnostics.max_carter_rel_error
+              << " carter_abs="
+              << carter_monitored.diagnostics.max_carter_abs_error
               << " accepted="
               << monitored.diagnostics.accepted_steps
               << " rejected="

@@ -21,6 +21,9 @@ struct GeodesicEventSelection {
     std::string message;
 };
 
+std::optional<std::string> validate_geodesic_event_contracts(
+    const std::vector<GeodesicEvent>& events);
+
 GeodesicEventSelection select_initial_any_event(
     const PhaseSpaceState& initial,
     const std::vector<GeodesicEvent>& events);

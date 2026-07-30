@@ -2,6 +2,7 @@
 
 #include "geodesic_config_internal.h"
 #include "geodesic_event_selection.h"
+#include "geodesic_invariant_monitor.h"
 #include "geodesic_step_attempt.h"
 
 #include <algorithm>
@@ -22,13 +23,6 @@ bool finite_phase_space(const PhaseSpaceState& state) {
     return std::isfinite(state.affine) &&
            state.x.v.all_finite() &&
            state.p.v.all_finite();
-}
-
-double invariant_drift(double current, double initial) {
-    const double difference = std::fabs(current - initial);
-    return initial == 0.0
-               ? difference
-               : difference / std::fabs(initial);
 }
 
 TerminationReason rejection_reason(RejectionKind kind) {
@@ -110,15 +104,6 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
             "initial Hamiltonian constraint exceeds tolerance");
     }
 
-    const double initial_energy = -initial.p.v[0];
-    const double initial_lz = initial.p.v[3];
-    if (config.monitor_energy) {
-        diagnostics.max_energy_rel_error = 0.0;
-    }
-    if (config.monitor_lz) {
-        diagnostics.max_lz_rel_error = 0.0;
-    }
-
     std::vector<GeodesicEvent> active_events = events;
     if (std::isfinite(config.max_proper_time)) {
         active_events.push_back(GeodesicEvent{
@@ -145,6 +130,26 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
             TerminationReason::MaxCoordinateTime,
             config.min_step,
         });
+    }
+
+    const std::optional<std::string> event_contract_failure =
+        detail::validate_geodesic_event_contracts(active_events);
+    if (event_contract_failure.has_value()) {
+        return terminate(
+            initial,
+            TerminationReason::EventRootFailure,
+            *event_contract_failure);
+    }
+
+    detail::GeodesicInvariantMonitor invariant_monitor(
+        initial, config);
+    std::string invariant_failure;
+    if (!invariant_monitor.initialize(
+            diagnostics, invariant_failure)) {
+        return terminate(
+            initial,
+            TerminationReason::NonFiniteState,
+            std::move(invariant_failure));
     }
 
     const detail::GeodesicEventSelection initial_event =
@@ -332,6 +337,16 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
                     error.what());
         }
 
+        if (!invariant_monitor.update(
+                accepted_state,
+                diagnostics,
+                invariant_failure)) {
+            return terminate(
+                current,
+                TerminationReason::NonFiniteState,
+                std::move(invariant_failure));
+        }
+
         ++diagnostics.accepted_steps;
         diagnostics.min_step =
             std::isnan(diagnostics.min_step)
@@ -347,20 +362,6 @@ GeodesicIntegrationResult GeodesicIntegrator::integrate(
                       accepted_step_magnitude);
         diagnostics.max_constraint_error = std::max(
             diagnostics.max_constraint_error, constraint);
-        if (config.monitor_energy) {
-            diagnostics.max_energy_rel_error = std::max(
-                diagnostics.max_energy_rel_error,
-                invariant_drift(
-                    -accepted_state.p.v[0],
-                    initial_energy));
-        }
-        if (config.monitor_lz) {
-            diagnostics.max_lz_rel_error = std::max(
-                diagnostics.max_lz_rel_error,
-                invariant_drift(
-                    accepted_state.p.v[3],
-                    initial_lz));
-        }
         current = accepted_state;
 
         if (constraint > config.constraint_tolerance) {

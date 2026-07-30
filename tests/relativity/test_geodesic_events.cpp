@@ -182,6 +182,8 @@ int main() {
           std::isnan(diagnostics.max_lz_rel_error));
     check("Carter diagnostic starts unavailable",
           std::isnan(diagnostics.max_carter_rel_error));
+    check("Carter absolute diagnostic starts unavailable",
+          std::isnan(diagnostics.max_carter_abs_error));
     check("v3 interior cutoff reason is representable",
           TerminationReason::InteriorCutoff !=
               TerminationReason::HorizonCrossing);
