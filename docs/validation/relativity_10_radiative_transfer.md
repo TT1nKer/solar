@@ -199,8 +199,18 @@ The clean installed consumer reported:
 Verified implementation commit:
 `9f9c144f86bb296e1887522c0b1bb9317f4f41ad`.
 
-Linux/GCC release-candidate CI is pending. No Linux sanitizer, RTX 3080, or
-DE440-data validation is claimed.
+The PR-head Linux/GCC release candidate passed the full Release build, test
+suite, installed consumer, CLI, and sample-command gates on Ubuntu 24.04
+x86_64 with GCC 13.3.0 at commit
+`a65befbc1ae1462b52297b2a2e5c9e82e040eb3c`:
+<https://github.com/TT1nKer/solar/actions/runs/30536006406>.
+
+Linux retained the constant/subdivision maxima above and measured
+`max_surface_normal_error=7.7037197775489434e-34`. Its installed consumer
+reported transfer intensity `3.1074793594062804`, transmission
+`0.22313016014842982`, disk temperature `8`, torus density `3`, surface
+specific intensity `6.0000000000000036`, and one surface crossing. No Linux
+sanitizer, RTX 3080, or DE440-data validation is claimed.
 
 ## Mutation sensitivity
 
@@ -230,9 +240,9 @@ implementation code was copied.
 
 ## Result
 
-`LOCAL_PASSED_AWAITING_LINUX_CI`. All local Phase 5 physics, failure,
-installation, mutation, Release, and sanitizer gates pass. Phase 5 becomes
-`PASSED` only after the PR-head Linux/GCC CI succeeds.
+`PASSED`. All local Phase 5 physics, failure, installation, mutation,
+Release, and sanitizer gates pass, and the PR-head Linux/GCC Release,
+installed-consumer, CLI, and sample-command gates pass.
 
 ## Limitations
 

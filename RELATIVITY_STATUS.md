@@ -1,10 +1,10 @@
 # Solar Relativity Status
 
 CURRENT_PHASE: 5
-PHASE_STATE: LOCAL_PASSED_AWAITING_LINUX_CI
-LAST_VERIFIED_COMMIT: 9f9c144f86bb296e1887522c0b1bb9317f4f41ad
+PHASE_STATE: PASSED
+LAST_VERIFIED_COMMIT: a65befbc1ae1462b52297b2a2e5c9e82e040eb3c
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
-  Phase 5 Ubuntu/GCC CI pending
+  Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
 LAST_VERIFIED_COMMANDS:
 - `make clean`
 - `make -j4 test`
@@ -14,6 +14,8 @@ LAST_VERIFIED_COMMANDS:
   Phase 5 focused executables
 - wrong-sign observer-to-past attenuation mutation
 - BL-to-KS fluid four-velocity component-copy mutation
+- GitHub C++ CI build, complete test suite, installed external consumer, CLI,
+  and sample-command gates
 - `git diff --check`
 
 ACTUALLY_COMPLETED:
@@ -128,14 +130,13 @@ NOT_COMPLETED:
 - Absolute spectral calibration, detector bandpass, polarization, scattering,
   returning radiation, self-gravity, magnetic evolution, or GRMHD.
 - DE440's eight external-data assertions on this machine.
-- Phase 5 Linux/GCC CI, Linux sanitizer, or non-x86_64/non-arm64 verification.
+- Linux sanitizer or non-x86_64/non-arm64 verification.
 - The one-off Carter-Q, Kerr inverse-domain, convergence, and multiprecision
   audit probes are supplementary evidence, not committed CI regression
   executables.
 
 CURRENT_BLOCKERS:
-- No implementation blocker. Phase 5 awaits the required PR-head Linux/GCC
-  release-candidate CI before `PASSED`.
+- None.
 
 MOST_LIKELY_BUGS:
 - Endpoint-bracket event detection can miss tangencies, multiple roots, or an even number of roots inside one accepted step.
@@ -256,6 +257,6 @@ FASTEST_WAY_TO_FALSIFY:
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Publish the Phase 5 release candidate and require PR-head Linux/GCC CI.
-  Enter Phase 6 CPU reference rendering only after Phase 5 is `PASSED`; do not
-  begin GPU, WASM, or UI first.
+- Phase 6 CPU reference rendering backed by the installed Phase 5 transfer
+  API. Do not begin GPU, WASM, or UI before the CPU reference and regression
+  image gates pass.
