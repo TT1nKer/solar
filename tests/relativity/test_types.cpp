@@ -67,6 +67,10 @@ int main() {
         "new absolute Carter diagnostic defaults unavailable",
         std::isnan(
             phase_one_aggregate.max_carter_abs_error));
+    check(
+        "near-critical termination reason is representable",
+        TerminationReason::NearCriticalOrbit !=
+            TerminationReason::UserEvent);
 
     std::cout << "\n=== Results: " << passed << " passed, " << failed
               << " failed ===\n";
