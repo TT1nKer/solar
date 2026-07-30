@@ -2,6 +2,7 @@
 #include "solar/relativity/kerr_separated.h"
 
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -50,6 +51,49 @@ PhaseSpaceState radial_photon(
         -(inverse[0][0] *
           state.p.v[0] * state.p.v[0]) /
         inverse[1][1];
+    state.p.v[1] =
+        std::copysign(std::sqrt(radial_squared), radial_sign);
+    return state;
+}
+
+PhaseSpaceState constrained_photon(
+    const KerrBoyerLindquistMetric& metric,
+    double radius,
+    double theta,
+    double lz,
+    double p_theta,
+    double radial_sign) {
+    PhaseSpaceState state{
+        0.0,
+        Contravariant4{
+            Vec4{{0.0, radius, theta, 0.0}}},
+        Covariant4{
+            Vec4{{-1.0, 0.0, p_theta, lz}}},
+    };
+    const Mat4 inverse = metric.contravariant(state.x);
+    double non_radial_twice_hamiltonian = 0.0;
+    for (std::size_t row = 0; row < 4; ++row) {
+        if (row == 1) {
+            continue;
+        }
+        for (std::size_t column = 0; column < 4; ++column) {
+            if (column == 1) {
+                continue;
+            }
+            non_radial_twice_hamiltonian +=
+                inverse[row][column] *
+                state.p.v[row] *
+                state.p.v[column];
+        }
+    }
+    const double radial_squared =
+        -non_radial_twice_hamiltonian /
+        inverse[1][1];
+    if (!(radial_squared >= 0.0) ||
+        !std::isfinite(radial_squared)) {
+        throw std::domain_error(
+            "test photon has no real radial momentum");
+    }
     state.p.v[1] =
         std::copysign(std::sqrt(radial_squared), radial_sign);
     return state;
@@ -246,6 +290,140 @@ int main() {
     check(
         "backward-traced momentum remains future directed",
         backward.final_state.p.v[0] < 0.0);
+
+    const PhaseSpaceState scattering =
+        constrained_photon(
+            schwarzschild,
+            10.0,
+            kPi / 2.0,
+            6.0,
+            0.0,
+            -1.0);
+    const auto scattered = integrator.integrate(
+        scattering,
+        reference_config(1.0e-4, 1.0e-3, 100.0),
+        {radius_event(
+            "return sphere",
+            10.0,
+            TerminationReason::Escaped)});
+    check(
+        "scattering ray returns through outer sphere",
+        scattered.diagnostics.reason ==
+            TerminationReason::Escaped);
+    check(
+        "scattering ray counts one radial turn",
+        scattered.diagnostics.radial_turns == 1);
+    check(
+        "scattering minimum radius is finite and interior",
+        std::isfinite(
+            scattered.diagnostics.min_radius_M) &&
+            scattered.diagnostics.min_radius_M < 5.0 &&
+            scattered.diagnostics.min_radius_M > 4.0);
+
+    const auto scattered_fine = integrator.integrate(
+        scattering,
+        reference_config(5.0e-5, 5.0e-4, 100.0),
+        {radius_event(
+            "fine return sphere",
+            10.0,
+            TerminationReason::Escaped)});
+    check(
+        "fine scattering ray also returns",
+        scattered_fine.diagnostics.reason ==
+            TerminationReason::Escaped);
+    check(
+        "turning return converges under halved step",
+        std::fabs(
+            scattered.final_state.x.v[0] -
+            scattered_fine.final_state.x.v[0]) <
+            1.0e-7 &&
+            std::fabs(
+                scattered.final_state.x.v[3] -
+                scattered_fine.final_state.x.v[3]) <
+            1.0e-7);
+
+    const double starting_mu = 0.5;
+    const double starting_theta = std::acos(starting_mu);
+    const PhaseSpaceState polar_turn =
+        constrained_photon(
+            schwarzschild,
+            10.0,
+            starting_theta,
+            2.0,
+            -0.1,
+            1.0);
+    const GeodesicEvent polar_return{
+        "polar return",
+        [starting_theta](const PhaseSpaceState& state) {
+            return state.x.v[2] - starting_theta;
+        },
+        EventDirection::Increasing,
+        TerminationReason::UserEvent,
+        1.0e-10,
+    };
+    const auto polar = integrator.integrate(
+        polar_turn,
+        reference_config(1.0e-5, 2.0e-4, 100.0),
+        {polar_return});
+    check(
+        "polar return event reached",
+        polar.diagnostics.reason ==
+            TerminationReason::UserEvent);
+    check(
+        "polar ray counts one polar turn",
+        polar.diagnostics.polar_turns == 1);
+    check_near(
+        "polar ray returns to starting theta",
+        polar.final_state.x.v[2],
+        starting_theta,
+        1.0e-9);
+
+    const PhaseSpaceState critical_root{
+        0.0,
+        Contravariant4{
+            Vec4{{0.0, 3.0, kPi / 2.0, 0.0}}},
+        Covariant4{
+            Vec4{{-1.0, 0.0, 0.0, std::sqrt(27.0)}}},
+    };
+    const auto critical = integrator.integrate(
+        critical_root,
+        reference_config(1.0e-5, 1.0e-4, 10.0));
+    check(
+        "spherical photon is explicitly critical",
+        critical.diagnostics.reason ==
+            TerminationReason::NearCriticalOrbit);
+    check(
+        "critical photon is not a simple radial turn",
+        critical.diagnostics.radial_turns == 0);
+    std::cout
+        << std::setprecision(17)
+        << "  turning_probe radial_reason="
+        << static_cast<int>(scattered.diagnostics.reason)
+        << " radial_r=" << scattered.final_state.x.v[1]
+        << " radial_min=" << scattered.diagnostics.min_radius_M
+        << " radial_rejected="
+        << scattered.diagnostics.rejected_steps
+        << " radial_accepted="
+        << scattered.diagnostics.accepted_steps
+        << " radial_message="
+        << scattered.diagnostics.message
+        << " convergence_dt="
+        << std::fabs(
+               scattered.final_state.x.v[0] -
+               scattered_fine.final_state.x.v[0])
+        << " convergence_dphi="
+        << std::fabs(
+               scattered.final_state.x.v[3] -
+               scattered_fine.final_state.x.v[3])
+        << " polar_reason="
+        << static_cast<int>(polar.diagnostics.reason)
+        << " polar_theta=" << polar.final_state.x.v[2]
+        << " polar_rejected="
+        << polar.diagnostics.rejected_steps
+        << " polar_accepted="
+        << polar.diagnostics.accepted_steps
+        << " polar_message="
+        << polar.diagnostics.message << "\n";
 
     const GeodesicEvent malformed_event{
         "missing callback",

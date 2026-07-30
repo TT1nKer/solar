@@ -5,6 +5,7 @@
 #include "kerr_separated_events.h"
 #include "kerr_separated_state.h"
 #include "kerr_separated_step.h"
+#include "kerr_separated_turning.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,11 @@ enum class RejectionKind {
     ForbiddenPotential,
     InvalidMetricPoint,
     NonFiniteStage,
+};
+
+struct PendingTurning {
+    detail::TurningCoordinate coordinate;
+    detail::TurningRoot root;
 };
 
 bool finite_phase_space(const PhaseSpaceState& state) noexcept {
@@ -61,6 +67,34 @@ double affine_root_tolerance(
     const KerrBoyerLindquistMetric& metric,
     const KerrSeparatedConfig& config) noexcept {
     return config.root_tolerance * metric.mass();
+}
+
+bool ready_for_turning_release(
+    const PendingTurning& pending,
+    const detail::KerrSeparatedState& current,
+    const detail::KerrSeparatedPotentials& potentials,
+    const KerrSeparatedConfig& config) {
+    const auto values = potentials.evaluate(
+        current.values[detail::kRadius],
+        current.values[detail::kMu]);
+    const bool radial =
+        pending.coordinate ==
+        detail::TurningCoordinate::Radial;
+    const double potential =
+        radial ? values.radial : values.polar;
+    const double potential_scale =
+        radial ? values.radial_scale : values.polar_scale;
+    const double coordinate =
+        current.values[
+            radial ? detail::kRadius : detail::kMu];
+    const double coordinate_scale =
+        radial ? potentials.mass() : 1.0;
+    return std::fabs(potential) / potential_scale <=
+               config.potential_tolerance ||
+           std::fabs(
+               coordinate - pending.root.coordinate) /
+                   coordinate_scale <=
+               config.root_tolerance;
 }
 
 } // namespace
@@ -223,6 +257,9 @@ KerrSeparatedIntegrator::integrate(
     std::size_t attempted_steps = 0;
     std::size_t consecutive_rejections = 0;
     RejectionKind last_rejection = RejectionKind::None;
+    std::optional<PendingTurning> pending_turning;
+    const detail::KerrSeparatedPotentials potentials(
+        metric_->mass(), metric_->spin_length(), constants);
     diagnostics.min_radius_M = initial.x.v[1];
 
     while (true) {
@@ -231,6 +268,85 @@ KerrSeparatedIntegrator::integrate(
                 current_public,
                 TerminationReason::MaxSteps,
                 "maximum total separated DOPRI5 attempts reached");
+        }
+
+        if (pending_turning.has_value() &&
+            ready_for_turning_release(
+                *pending_turning,
+                current,
+                potentials,
+                config)) {
+            ++attempted_steps;
+            detail::TurningRelease release;
+            PhaseSpaceState released_public;
+            try {
+                release =
+                    detail::release_kerr_turning_point(
+                        pending_turning->coordinate,
+                        pending_turning->root,
+                        *metric_,
+                        constants,
+                        current,
+                        integration_direction,
+                        config);
+                released_public =
+                    detail::reconstruct_kerr_phase_space(
+                        *metric_, constants, release.state);
+            } catch (const std::exception& error) {
+                return terminate(
+                    current_public,
+                    TerminationReason::StepUnderflow,
+                    std::string(
+                        "turning release failed: ") +
+                        error.what());
+            }
+
+            const double release_magnitude =
+                std::fabs(release.mino_step);
+            ++diagnostics.accepted_steps;
+            if (pending_turning->coordinate ==
+                detail::TurningCoordinate::Radial) {
+                ++diagnostics.radial_turns;
+            } else {
+                ++diagnostics.polar_turns;
+            }
+            diagnostics.min_mino_step =
+                std::isnan(diagnostics.min_mino_step)
+                    ? release_magnitude
+                    : std::min(
+                          diagnostics.min_mino_step,
+                          release_magnitude);
+            diagnostics.max_mino_step =
+                std::isnan(diagnostics.max_mino_step)
+                    ? release_magnitude
+                    : std::max(
+                          diagnostics.max_mino_step,
+                          release_magnitude);
+            diagnostics.min_radius_M = std::min(
+                {diagnostics.min_radius_M,
+                 release.root_radius_M,
+                 released_public.x.v[1]});
+            diagnostics.azimuthal_advance =
+                released_public.x.v[3] - initial.x.v[3];
+            diagnostics.winding =
+                diagnostics.azimuthal_advance /
+                (2.0 *
+                 3.141592653589793238462643383279502884);
+
+            current = release.state;
+            current_public = released_public;
+            current_mino += release.mino_step;
+            proposed_step = std::copysign(
+                std::min(
+                    config.max_mino_step,
+                    std::max(
+                        config.min_mino_step,
+                        2.0 * release_magnitude)),
+                integration_direction);
+            consecutive_rejections = 0;
+            last_rejection = RejectionKind::None;
+            pending_turning.reset();
+            continue;
         }
 
         const double requested_magnitude = std::min(
@@ -275,6 +391,56 @@ KerrSeparatedIntegrator::integrate(
                 trial.polar_forbidden) {
                 last_rejection =
                     RejectionKind::ForbiddenPotential;
+                const detail::TurningCoordinate coordinate =
+                    trial.radial_forbidden
+                        ? detail::TurningCoordinate::Radial
+                        : detail::TurningCoordinate::Polar;
+                const double allowed_coordinate =
+                    current.values[
+                        coordinate ==
+                                detail::TurningCoordinate::Radial
+                            ? detail::kRadius
+                            : detail::kMu];
+                const double forbidden_coordinate =
+                    coordinate ==
+                            detail::TurningCoordinate::Radial
+                        ? trial
+                              .first_radial_forbidden_coordinate
+                        : trial
+                              .first_polar_forbidden_coordinate;
+                const double fixed_other_coordinate =
+                    current.values[
+                        coordinate ==
+                                detail::TurningCoordinate::Radial
+                            ? detail::kMu
+                            : detail::kRadius];
+                const detail::TurningRoot root =
+                    detail::locate_kerr_turning_root(
+                        coordinate,
+                        allowed_coordinate,
+                        forbidden_coordinate,
+                        potentials,
+                        fixed_other_coordinate,
+                        config.root_tolerance,
+                        config.potential_tolerance,
+                        config
+                            .critical_derivative_tolerance);
+                if (root.status ==
+                    detail::TurningStatus::Failed) {
+                    return terminate(
+                        current_public,
+                        TerminationReason::EventRootFailure,
+                        root.message);
+                }
+                if (root.status ==
+                    detail::TurningStatus::NearCritical) {
+                    return terminate(
+                        current_public,
+                        TerminationReason::NearCriticalOrbit,
+                        root.message);
+                }
+                pending_turning =
+                    PendingTurning{coordinate, root};
                 proposed_step =
                     attempted_step *
                     config.dopri5.min_factor;
