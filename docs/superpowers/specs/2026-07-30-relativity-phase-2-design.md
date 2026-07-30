@@ -1,7 +1,7 @@
 # Solar Relativity Phase 2 Observer and Kerr Benchmark Design
 
-**Status:** Approved for implementation on 2026-07-30  
-**Source contract:** `SOLAR_RELATIVITY_KERR_完整实施主提示词_v3.md`  
+**Status:** Approved for implementation on 2026-07-30
+**Source contract:** `SOLAR_RELATIVITY_KERR_完整实施主提示词_v3.md`
 **Previous gate:** Phase 1 `PASSED` at
 `1bf7442c141e5440642af18677dc8680f96bfc9d`
 
