@@ -23,29 +23,42 @@ GeodesicInvariantMonitor::GeodesicInvariantMonitor(
     : monitor_energy_(config.monitor_energy),
       monitor_lz_(config.monitor_lz),
       carter_evaluator_(config.carter_evaluator),
+      stationary_energy_evaluator_(
+          config.stationary_energy_evaluator),
+      axial_angular_momentum_evaluator_(
+          config.axial_angular_momentum_evaluator),
       initial_state_(initial),
       initial_energy_(-initial.p.v[0]),
       initial_lz_(initial.p.v[3]) {}
 
-bool GeodesicInvariantMonitor::evaluate_carter(
+bool GeodesicInvariantMonitor::evaluate(
+    const char* label,
+    const InvariantEvaluator& evaluator,
     const PhaseSpaceState& state,
+    double default_value,
     double& value,
     std::string& failure_message) const {
+    if (!evaluator) {
+        value = default_value;
+        return true;
+    }
     try {
-        value = carter_evaluator_(state);
+        value = evaluator(state);
     } catch (const std::exception& error) {
         failure_message =
-            std::string("Carter evaluator failed: ") +
+            std::string(label) + " evaluator failed: " +
             error.what();
         return false;
     } catch (...) {
         failure_message =
-            "Carter evaluator failed with a non-standard exception";
+            std::string(label) +
+            " evaluator failed with a non-standard exception";
         return false;
     }
     if (!std::isfinite(value)) {
         failure_message =
-            "Carter evaluator returned a non-finite value";
+            std::string(label) +
+            " evaluator returned a non-finite value";
         return false;
     }
     return true;
@@ -55,16 +68,37 @@ bool GeodesicInvariantMonitor::initialize(
     IntegrationDiagnostics& diagnostics,
     std::string& failure_message) {
     if (monitor_energy_) {
+        if (!evaluate(
+                "stationary energy",
+                stationary_energy_evaluator_,
+                initial_state_,
+                -initial_state_.p.v[0],
+                initial_energy_,
+                failure_message)) {
+            return false;
+        }
         diagnostics.max_energy_rel_error = 0.0;
     }
     if (monitor_lz_) {
+        if (!evaluate(
+                "axial angular momentum",
+                axial_angular_momentum_evaluator_,
+                initial_state_,
+                initial_state_.p.v[3],
+                initial_lz_,
+                failure_message)) {
+            return false;
+        }
         diagnostics.max_lz_rel_error = 0.0;
     }
     if (!carter_evaluator_) {
         return true;
     }
-    if (!evaluate_carter(
+    if (!evaluate(
+            "Carter",
+            carter_evaluator_,
             initial_state_,
+            0.0,
             initial_carter_,
             failure_message)) {
         return false;
@@ -78,18 +112,49 @@ bool GeodesicInvariantMonitor::update(
     const PhaseSpaceState& state,
     IntegrationDiagnostics& diagnostics,
     std::string& failure_message) const {
-    const double energy_error = monitor_energy_
-        ? normalized_invariant_error(
-              -state.p.v[0], initial_energy_)
-        : 0.0;
-    const double lz_error = monitor_lz_
-        ? normalized_invariant_error(
-              state.p.v[3], initial_lz_)
-        : 0.0;
+    double energy = -state.p.v[0];
+    if (monitor_energy_ &&
+        !evaluate(
+            "stationary energy",
+            stationary_energy_evaluator_,
+            state,
+            energy,
+            energy,
+            failure_message)) {
+        return false;
+    }
+    const double energy_error =
+        monitor_energy_
+            ? normalized_invariant_error(
+                  energy, initial_energy_)
+            : 0.0;
+
+    double lz = state.p.v[3];
+    if (monitor_lz_ &&
+        !evaluate(
+            "axial angular momentum",
+            axial_angular_momentum_evaluator_,
+            state,
+            lz,
+            lz,
+            failure_message)) {
+        return false;
+    }
+    const double lz_error =
+        monitor_lz_
+            ? normalized_invariant_error(
+                  lz, initial_lz_)
+            : 0.0;
 
     double carter = 0.0;
     if (carter_evaluator_ &&
-        !evaluate_carter(state, carter, failure_message)) {
+        !evaluate(
+            "Carter",
+            carter_evaluator_,
+            state,
+            0.0,
+            carter,
+            failure_message)) {
         return false;
     }
 

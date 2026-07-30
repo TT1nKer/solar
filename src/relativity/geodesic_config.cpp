@@ -132,6 +132,8 @@ GeodesicIntegrationConfig::cpu_reference(
         false,
         false,
         {},
+        {},
+        {},
     };
     detail::validate_geodesic_config(config);
     return config;
