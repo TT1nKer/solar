@@ -55,7 +55,9 @@ separate from volume coefficients so Phase 6 can feed both from accepted rays.
 | `src/relativity/analytic_disk_fluid.cpp` | L1 | Surface-bounded circular disk profile. |
 | `src/relativity/analytic_torus_fluid.cpp` | L1 | Compact Gaussian torus profile. |
 | `include/solar/relativity/thin_disk.h` | L1/L2 public | Surface emission, crossing value, bounded recorder. |
-| `src/relativity/thin_disk.cpp` | L1/L2 | Surface normal, `g^3/g^4`, opacity composition, bounds. |
+| `src/relativity/thin_disk_surface.cpp` | L1 | Surface source validation and intensity law. |
+| `src/relativity/thin_disk_geometry.{h,cpp}` | L1 internal | BL/KS surface-normal construction and validation. |
+| `src/relativity/thin_disk.cpp` | L2 | `g^3/g^4`, opacity composition, and crossing bounds. |
 | focused tests below | validation | Independent analytic and chart/failure contracts. |
 
 ---
@@ -617,6 +619,9 @@ git commit -m "feat(relativity): add analytic Kerr torus"
 **Files:**
 - Create: `include/solar/relativity/thin_disk.h`
 - Create: `src/relativity/thin_disk.cpp`
+- Create: `src/relativity/thin_disk_surface.cpp`
+- Create: `src/relativity/thin_disk_geometry.h`
+- Create: `src/relativity/thin_disk_geometry.cpp`
 - Create: `tests/relativity/test_thin_disk.cpp`
 
 **Interfaces:**
@@ -626,7 +631,7 @@ git commit -m "feat(relativity): add analytic Kerr torus"
   `ThinDiskCrossing`, `ThinDiskObservedState`, `ThinDiskRecorderConfig`,
   `ThinDiskRecordResult`, and `ThinDiskCrossingRecorder`.
 
-- [ ] **Step 1: Write failing one-crossing/redshift tests**
+- [x] **Step 1: Write failing one-crossing/redshift tests**
 
 Use an exact disk surface state and controlled photon/emitter pairing with
 known `g=0.5`. For temperature `8`, emitted specific intensity `6`, emitted
@@ -641,7 +646,7 @@ I_bolometric_obs = 0.0625 * 10
 Check affine, position, radius, velocity, emitter frequency, `g`, unit
 spacelike normal, `u dot n=0`, front/back, and image order zero.
 
-- [ ] **Step 2: Write failing multiple/opacity tests**
+- [x] **Step 2: Write failing multiple/opacity tests**
 
 For two sheet sources `S1,S2`, depths `tau1,tau2` in observer-to-past order,
 require:
@@ -657,7 +662,7 @@ intensity and zero transmission. Record exactly eight semi-transparent
 crossings, reject the ninth as `CrossingLimitReached`, and preserve the first
 eight. Invalid/out-of-radius disk samples do not consume image order.
 
-- [ ] **Step 3: Add failing BL/KS surface agreement**
+- [x] **Step 3: Add failing BL/KS surface agreement**
 
 At common disk events require:
 
@@ -667,7 +672,7 @@ At common disk events require:
 - each normal is orthogonal to emitter velocity within `1e-10`;
 - identical front/back classification.
 
-- [ ] **Step 4: Run and confirm red**
+- [x] **Step 4: Run and confirm red**
 
 Run:
 
@@ -677,7 +682,7 @@ make -j4 tests/relativity/test_thin_disk
 
 Expected: compilation fails because `thin_disk.h` is absent.
 
-- [ ] **Step 5: Implement surface emission and normal**
+- [x] **Step 5: Implement surface emission and normal**
 
 Use the exact recorder surface:
 
@@ -721,7 +726,7 @@ Build the north normal in BL with negative theta direction, normalize it
 against the BL metric, and transform it contravariantly for KS. Refuse any
 non-unit/non-orthogonal result instead of repairing it.
 
-- [ ] **Step 6: Implement the bounded recorder**
+- [x] **Step 6: Implement the bounded recorder**
 
 Reserve exactly `max_crossings` in the constructor. Do not grow beyond it.
 For each valid disk sample:
@@ -737,7 +742,7 @@ Opaque mode applies the full observed source and closes. Semi-transparent mode
 uses `-expm1(-surface_tau)`. Surface depth positive infinity is allowed only
 for opaque saturation.
 
-- [ ] **Step 7: Run focused and baseline tests**
+- [x] **Step 7: Run focused and baseline tests**
 
 Run:
 
@@ -749,7 +754,7 @@ make -j4 test
 
 Expected: all assertions pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add include/solar/relativity/thin_disk.h \

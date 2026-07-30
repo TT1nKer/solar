@@ -615,6 +615,9 @@ src/relativity/kerr_fluid_kinematics.cpp
 src/relativity/analytic_disk_fluid.cpp
 src/relativity/analytic_torus_fluid.cpp
 src/relativity/thin_disk.cpp
+src/relativity/thin_disk_surface.cpp
+src/relativity/thin_disk_geometry.h
+src/relativity/thin_disk_geometry.cpp
 ```
 
 Focused tests:
