@@ -40,6 +40,7 @@ enum class TerminationReason {
     ConstraintViolation,
     EventRootFailure,
     UserEvent,
+    NearCriticalOrbit,
 };
 
 struct IntegrationDiagnostics {

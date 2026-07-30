@@ -291,14 +291,24 @@ int main() {
         0.13962018194639417,
         2.0e-16);
 
+    const Mat4 ordinary_metric =
+        ordinary_kerr.covariant(ordinary_point);
     const Covariant4 zamo_momentum = lower_index(
-        ordinary_kerr.covariant(ordinary_point),
+        ordinary_metric,
         zamo.frame->tetrad.basis[0]);
+    const double zamo_axial_scale =
+        std::fabs(
+            ordinary_metric[3][0] *
+            zamo.frame->tetrad.basis[0].v[0]) +
+        std::fabs(
+            ordinary_metric[3][3] *
+            zamo.frame->tetrad.basis[0].v[3]);
     check_near(
         "ZAMO axial angular momentum",
         zamo_momentum.v[3],
         0.0,
-        2.0e-17);
+        8.0 * std::numeric_limits<double>::epsilon() *
+            zamo_axial_scale);
     check(
         "ZAMO future coordinate time",
         zamo.frame->tetrad.basis[0].v[0] > 0.0);

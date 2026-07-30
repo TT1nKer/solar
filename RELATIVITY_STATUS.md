@@ -1,21 +1,25 @@
 # Solar Relativity Status
 
-CURRENT_PHASE: 2
+CURRENT_PHASE: 3
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: 0f76d411aaf96e8abf31a2a88567c3bf3fedd876
-LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0
+LAST_VERIFIED_COMMIT: eb42b19bb32c20a294532cb2d441dc403c201d94
+LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
+  Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
 LAST_VERIFIED_COMMANDS:
 - `make clean`
-- `make`
-- `make test`
-- all 22 `tests/relativity/test_*` executables
-- AddressSanitizer and UndefinedBehaviorSanitizer build plus all 22 relativity
-  tests and `tests/test_integrator`
+- `make -j4 test`
+- `make test-external-consumer`
+- GitHub C++ CI build, complete test suite, installed external consumer, CLI,
+  and sample-command gates
+- all 27 `tests/relativity/test_*` executables
+- AddressSanitizer and UndefinedBehaviorSanitizer build plus all five Phase 3
+  focused executables
 - DOPRI, Hamiltonian, RMS, dense-output, invalid-domain, observer, local-state,
   Carter, special-orbit, and analytic/numerical-shadow checks
 - horizontal-screen-sign, Bardeen-`xi`-sign, near-axis interior-stability,
   and invalid-metric-as-capture mutation checks
 - independent 80-decimal Kerr special-radius and Bardeen-edge probe
+- controlled `1e-4M` common-event worldline mutation
 - `git diff --check`
 
 ACTUALLY_COMPLETED:
@@ -54,19 +58,41 @@ ACTUALLY_COMPLETED:
   chart failure from capture, enforces `alpha=-Lz/E`, recovers both horizontal
   Kerr shadow edges at `r=1000M` and `2000M`, and verifies the Schwarzschild
   critical radius.
-- Passed 1912/1912 relativity assertions across 22 executables and 67/67
+- Added literal Kerr separated radial and `mu=cos(theta)` potentials with
+  analytic derivatives, normalized residual scales, null/timelike support,
+  and Hamiltonian/canonical state round trips.
+- Added the public `KerrSeparatedIntegrator` Mino-time CPU path with fixed-size
+  DOPRI5 state, affine/proper limits, public events, negative integration,
+  explicit invalid-domain failures, and no per-step allocation.
+- Added rejected forbidden-potential trials, bracketed machine-refined simple
+  roots, controlled radial/polar release, exact turn counters, and explicit
+  `NearCriticalOrbit` refusal for double/critical roots.
+- Added a synchronized smooth turning-phase state that preserves
+  `dr/dgamma,dmu/dgamma` through the square-root endpoint, localizes later
+  velocity crossings, and refuses normalized phase drift above the `1e-10`
+  CPU constraint gate.
+- Localizes public termination events inside the nonzero Mino interval used
+  to approach and release a turning root, so affine and coordinate limits
+  cannot be skipped by the turn transition.
+- Added render-relevant minimum radius, azimuth/winding, radial/polar residual,
+  Hamiltonian-constraint, Carter-drift, accepted/rejected-step, and
+  termination diagnostics.
+- Cross-validated six common-event families against the generic Hamiltonian
+  solver: null/timelike, both spin signs, Schwarzschild, radial return, and
+  polar return. Release P95/maximum worldline error is `2.27726e-11`.
+- Proved the separated API through a clean installed external consumer.
+- Passed 2078/2078 relativity assertions across 27 executables and 67/67
   fixture-independent legacy assertions in release mode.
-- Passed all 1912 relativity assertions plus the 11-assertion legacy DOPRI
-  adapter test under AddressSanitizer and UndefinedBehaviorSanitizer.
+- Passed all 165 assertions in the five Phase 3 focused executables under
+  AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:
-- Separated Kerr radial/polar potentials, Mino-time solver, fundamental
-  frequencies, turning-point handling, or long-time structure-preserving
-  timelike integration.
+- Analytic elliptic Kerr geodesics, fundamental frequencies, or long-time
+  structure-preserving timelike integration.
 - Kerr–Schild coordinates, reliable physical horizon crossing, interior evolution, or singularity treatment.
 - Disk/material models, radiative transfer, reference renderer, image/movie pipeline, Solar adapter, WASM/GPU, UI, or visual regression.
 - DE440's eight external-data assertions on this machine.
-- GCC/Linux or non-arm64 verification.
+- Linux sanitizer or non-x86_64/non-arm64 verification.
 - The one-off Carter-Q, Kerr inverse-domain, convergence, and multiprecision
   audit probes are supplementary evidence, not committed CI regression
   executables.
@@ -96,7 +122,15 @@ MOST_LIKELY_BUGS:
   does not validate a full 2D image or near-extremal convergence.
 - Circular-orbit formulas are double precision and have not received a dense
   near-extremal sweep against an independent package.
-- Only Apple Clang 16 on macOS arm64 was verified locally.
+- The separated cross-check covers six moderate fixtures and one simple turn
+  of each type; long bound, repeated-turn, and near-extremal scientific sweeps
+  remain uncharacterized.
+- Near-axis separated trajectories with nonzero `Lz` are rejected because the
+  Boyer–Lindquist azimuth term is coordinate-singular.
+- The smooth turn-phase invariant ceiling is `1e-10`; a trajectory exceeding
+  it fails explicitly, but denser multiprecision characterization is pending.
+- Sanitizer validation is limited to Apple Clang 16 on macOS arm64; the
+  Ubuntu/GCC CI run covers Release behavior only.
 - Missing default DE440 data remains a visible skip.
 
 FASTEST_WAY_TO_FALSIFY:
@@ -126,9 +160,22 @@ FASTEST_WAY_TO_FALSIFY:
   comparisons, and Hamiltonian/Carter gates.
 - `./tests/relativity/test_geodesics_kerr`: ordinary Kerr constraint, exact
   monitored E/Lz, Carter drift, denominator semantics, and callback failures.
+- `./tests/relativity/test_kerr_separated_potentials`: literal `R/U`,
+  derivatives, scaling, and invalid domains.
+- `./tests/relativity/test_kerr_separated_state`: Hamilton/Mino direction,
+  locked-root, critical-root, and canonical round trips.
+- `./tests/relativity/test_kerr_separated`: limits, events, negative Mino
+  direction, radial/polar turns, critical refusal, and diagnostics.
+- `./tests/relativity/test_kerr_separated_crosscheck`: six common-event
+  Hamiltonian comparisons, convergence, constraints, Carter drift, and
+  P95/maximum worldline gates.
+- `./tests/relativity/test_kerr_separated_turning_phase`: phase crossing,
+  root-time accuracy, duplicate-count prevention, and critical classification.
+- `make test-external-consumer`: installed headers, symbols, observer/local
+  initialization, and separated integration.
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Phase 3 only: implement separated Kerr radial/polar potentials, turning
-  points, and Mino-time validation. Do not enter Phase 4 Kerr–Schild, matter,
-  transfer, renderer, GPU, or UI work before the Phase 3 gate passes.
+- Phase 4 only: Kerr–Schild coordinates, chart transforms, and physical
+  horizon-crossing validation. Do not enter matter, transfer, renderer, GPU,
+  or UI work before the Phase 4 gate passes.

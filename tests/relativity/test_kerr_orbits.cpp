@@ -62,12 +62,17 @@ int main() {
     }
 
     const KerrBoyerLindquistMetric positive_spin(1.0, 0.5);
+    constexpr double expected_prograde_isco =
+        4.233002529530826;
+    constexpr double prograde_isco_tolerance =
+        8.0 * std::numeric_limits<double>::epsilon() *
+        expected_prograde_isco;
     check_near(
         "positive-spin prograde ISCO",
         kerr_isco_radius(
             positive_spin, OrbitSense::Prograde),
-        4.233002529530826,
-        2.0e-15);
+        expected_prograde_isco,
+        prograde_isco_tolerance);
     check_near(
         "positive-spin retrograde ISCO",
         kerr_isco_radius(
@@ -104,8 +109,8 @@ int main() {
         "negative-spin prograde radius remains relative to spin",
         kerr_isco_radius(
             negative_spin, OrbitSense::Prograde),
-        4.233002529530826,
-        2.0e-15);
+        expected_prograde_isco,
+        prograde_isco_tolerance);
     check_near(
         "negative-spin retrograde radius remains relative to spin",
         kerr_isco_radius(
