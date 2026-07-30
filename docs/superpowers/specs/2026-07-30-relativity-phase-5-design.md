@@ -135,6 +135,7 @@ struct RedshiftSample {
 enum class TransferError {
     None,
     NonFiniteInput,
+    InvalidObserverFrequency,
     InvalidMetricPoint,
     InvalidFluidSample,
     FourVelocityNotUnitTimelike,
@@ -144,6 +145,14 @@ enum class TransferError {
     InvalidStep,
     NonFiniteResult,
     CrossingLimitReached,
+};
+
+struct RedshiftResult {
+    TransferError error = TransferError::None;
+    RedshiftSample sample;
+    std::string message;
+
+    explicit operator bool() const noexcept;
 };
 
 struct BackwardTransferState {
@@ -164,6 +173,12 @@ TransferAdvanceResult advance_backward_transfer(
     const BackwardTransferState& current,
     const TransferCoefficients& coefficients,
     double positive_ds);
+
+RedshiftResult evaluate_redshift(
+    const Metric& metric,
+    const PhaseSpaceState& photon,
+    const Contravariant4& emitter_four_velocity,
+    double observer_frequency);
 
 double specific_intensity_at_observer(
     double invariant_intensity,
@@ -272,8 +287,11 @@ does not define RGB.
 Both analytic matter models are configured with finite subextremal
 `mass_M`, `spin_chi`, and an `OrbitSense`. They support
 `KerrBoyerLindquistMetric` and `KerrSchildCartesianMetric` whose parameters
-match the model. Other metric implementations return vacuum rather than
-fabricating a coordinate interpretation.
+match the model. An unsupported metric or parameter mismatch throws
+`std::domain_error` rather than returning vacuum and hiding configuration
+drift. The trusted evaluation boundary converts that exception to
+`InvalidFluidSample`. A supported point outside the material's geometric
+support returns vacuum.
 
 An internal `kerr_fluid_kinematics` L1 module owns:
 
@@ -387,6 +405,43 @@ struct ThinDiskCrossing {
     double observed_temperature;
     double observed_specific_intensity;
     double observed_bolometric_intensity;
+};
+
+struct ThinDiskObservedState {
+    double specific_intensity = 0.0;
+    double bolometric_intensity = 0.0;
+    double transmission = 1.0;
+};
+
+struct ThinDiskRecorderConfig {
+    DiskOpacityMode opacity_mode = DiskOpacityMode::Opaque;
+    std::size_t max_crossings = 8;
+};
+
+struct ThinDiskRecordResult {
+    TransferError error = TransferError::None;
+    bool recorded = false;
+    bool closed = false;
+    std::string message;
+
+    explicit operator bool() const noexcept;
+};
+
+class ThinDiskCrossingRecorder {
+public:
+    ThinDiskCrossingRecorder(
+        ThinDiskRecorderConfig config,
+        AnalyticCircularDiskFluid disk,
+        ThinDiskSurfaceEmission emission);
+
+    ThinDiskRecordResult record(
+        const Metric& metric,
+        const PhaseSpaceState& photon,
+        double observer_frequency);
+
+    const std::vector<ThinDiskCrossing>& crossings() const noexcept;
+    const ThinDiskObservedState& observed() const noexcept;
+    bool closed() const noexcept;
 };
 ```
 
