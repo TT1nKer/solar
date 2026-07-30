@@ -1,17 +1,16 @@
 # Solar Relativity Status
 
 CURRENT_PHASE: 4
-PHASE_STATE: LOCAL_PASSED_AWAITING_LINUX_CI
-LAST_VERIFIED_COMMIT: 74087094dc98d2278f17e6350e15cb5c87557d00
+PHASE_STATE: PASSED
+LAST_VERIFIED_COMMIT: b838c1f316ddd8c69c38234e711fe603202e0f47
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0;
-  Phase 4 Linux/GCC pending, Phase 3 passed Ubuntu 24.04 x86_64 / GCC 13.3.0
-  via GitHub C++ CI
+  Ubuntu 24.04 x86_64 / GCC 13.3.0 via GitHub C++ CI
 LAST_VERIFIED_COMMANDS:
 - `make clean`
 - `make -j4 test`
 - `make test-external-consumer`
-- Phase 3 GitHub C++ CI build, complete test suite, installed external
-  consumer, CLI, and sample-command gates
+- GitHub C++ CI build, complete test suite, installed external consumer, CLI,
+  and sample-command gates
 - all 34 `tests/relativity/test_*` executables
 - AddressSanitizer and UndefinedBehaviorSanitizer build plus all seven Phase 4
   focused executables
@@ -221,6 +220,5 @@ FASTEST_WAY_TO_FALSIFY:
 - Rebuild all relativity tests with ASan/UBSan; any runtime diagnostic invalidates the gate.
 
 NEXT_ALLOWED_ACTION:
-- Phase 4 Linux/GCC CI only. After it passes, mark Phase 4 `PASSED` and begin
-  Phase 5 invariant radiative transfer; do not enter the reference renderer,
+- Phase 5 invariant radiative transfer. Do not enter the reference renderer,
   GPU, or UI before the Phase 5 gate passes.

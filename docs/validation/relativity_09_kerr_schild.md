@@ -142,15 +142,20 @@ Verified implementation commit:
 `74087094dc98d2278f17e6350e15cb5c87557d00`.
 
 Local platform: Darwin 23.6.0 arm64, Apple Clang 16.0.0. Phase 4 Linux/GCC CI
-is required before merge. No Linux sanitizer, RTX 3080, or DE440-data
-validation is claimed.
+also passed the full Release suite, installed consumer, CLI, and sample
+commands on Ubuntu 24.04 x86_64 with GCC 13.3.0 at release-candidate commit
+`b838c1f316ddd8c69c38234e711fe603202e0f47`:
+<https://github.com/TT1nKer/solar/actions/runs/30525361950>. The Linux
+installed consumer reported a KS constraint of `3.8713598020524017e-17` and
+inverse error of `2.2204460492503131e-16`. No Linux sanitizer, RTX 3080, or
+DE440-data validation is claimed.
 
 ## Result
 
-LOCAL PASSED. The Cartesian Kerr–Schild metric, canonical overlap transform,
+PASSED. The Cartesian Kerr–Schild metric, canonical overlap transform,
 chart-aware invariant monitoring, horizon localization/restart, positive
 interior evolution, installed public consumption, and BL/KS common-event
-agreement satisfy the local Phase 4 evidence gate.
+agreement satisfy the Phase 4 evidence gate.
 
 ## Limitations
 

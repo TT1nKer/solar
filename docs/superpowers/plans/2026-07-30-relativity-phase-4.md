@@ -875,7 +875,7 @@ git add docs/validation/relativity_09_kerr_schild.md \
 git commit -m "docs(relativity): validate Kerr-Schild Phase 4"
 ```
 
-- [ ] **Step 8: Publish one public pull request and validate Linux CI**
+- [x] **Step 8: Publish one public pull request and validate Linux CI**
 
 Push `codex/relativity-phase-4`, open a public PR against `main`, and let the
 single intentional release-candidate CI run. If Linux/GCC exposes a
