@@ -249,8 +249,9 @@ For either `R(r)` or `U(mu)`:
    trial and shrink the step;
 4. once positive and negative evaluations bracket a root, locate it with a
    safeguarded secant/bisection solve in the affected coordinate;
-5. advance the complete state to the root using dense output, subject to the
-   affine root tolerance converted by `d lambda/d gamma=Sigma`;
+5. use accepted dense-output steps to approach the root, then advance the
+   remaining complete state with a bounded local root transition subject to
+   the affine root tolerance converted by `d lambda/d gamma=Sigma`;
 6. evaluate the analytic potential derivative;
 7. if both potential and derivative meet the critical tolerances, terminate
    as `NearCriticalOrbit`;
