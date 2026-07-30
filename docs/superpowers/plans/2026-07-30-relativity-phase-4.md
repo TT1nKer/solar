@@ -722,14 +722,14 @@ git commit -m "test(relativity): validate Kerr horizon continuation"
 - Produces: compile/link/runtime proof for public KS metric and short
   Hamiltonian integration.
 
-- [ ] **Step 1: Extend the external probe**
+- [x] **Step 1: Extend the external probe**
 
 Include the public metric and event headers, instantiate
 `KerrSchildCartesianMetric(1.0, 0.5)`, evaluate an exterior metric/inverse,
 and run a short finite KS geodesic segment. Return a distinct nonzero code if
 the chart, inverse identity, or integration result is invalid.
 
-- [ ] **Step 2: Verify the installed consumer**
+- [x] **Step 2: Verify the installed consumer**
 
 Run:
 
@@ -740,7 +740,7 @@ make test-external-consumer
 Expected: installation, standalone CMake configure/build, and probe execution
 all pass without source-tree includes.
 
-- [ ] **Step 3: Verify no build-list edit is required**
+- [x] **Step 3: Verify no build-list edit is required**
 
 Run:
 
@@ -754,7 +754,7 @@ Expected: CMake `CONFIGURE_DEPENDS` discovers every new source. Do not edit
 `CMakeLists.txt` or `Makefile` unless this command demonstrates a discovery
 or export defect.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/external_consumer/probe.cpp
