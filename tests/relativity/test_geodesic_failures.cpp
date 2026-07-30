@@ -139,6 +139,24 @@ int main() {
     check("invalid directed event contract performs no accepted trial",
           invalid_event_contract.diagnostics.accepted_steps == 0);
 
+    int premature_invariant_calls = 0;
+    auto invalid_event_monitor_config = config();
+    invalid_event_monitor_config.carter_evaluator =
+        [&premature_invariant_calls](
+            const PhaseSpaceState&) {
+            ++premature_invariant_calls;
+            return 0.0;
+        };
+    const auto invalid_event_with_monitor = integrator.integrate(
+        photon(),
+        invalid_event_monitor_config,
+        {invalid_directed_event});
+    check("invalid event still reports contract failure with monitor",
+          invalid_event_with_monitor.diagnostics.reason ==
+              TerminationReason::EventRootFailure);
+    check("invalid event is validated before invariant callback",
+          premature_invariant_calls == 0);
+
     GeodesicEvent unknown_direction_event = initial_event;
     unknown_direction_event.direction =
         static_cast<EventDirection>(99);

@@ -4,11 +4,15 @@
 #include "solar/relativity/hamiltonian.h"
 
 #include <cstddef>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <vector>
 
 namespace solar::relativity {
+
+using InvariantEvaluator =
+    std::function<double(const PhaseSpaceState&)>;
 
 struct GeodesicIntegrationConfig {
     GeodesicKind kind;
@@ -26,6 +30,7 @@ struct GeodesicIntegrationConfig {
     double constraint_tolerance;
     bool monitor_energy = false;
     bool monitor_lz = false;
+    InvariantEvaluator carter_evaluator;
 
     static GeodesicIntegrationConfig cpu_reference(
         GeodesicKind kind,
