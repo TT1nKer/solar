@@ -181,7 +181,14 @@ public:
 };
 ```
 
-`src/relativity/kerr_chart_transform.cpp` owns the complete transform.
+Implementation ownership is split at the natural review boundary:
+
+- `src/relativity/kerr_chart_fields.h` owns scalar-generic logarithmic
+  offsets and the forward position expression;
+- `src/relativity/kerr_chart_transform.cpp` owns parameter/domain checks,
+  position maps, and Jacobians;
+- `src/relativity/kerr_chart_state_transform.cpp` owns canonical covector
+  and affine-preserving state transforms.
 
 The transform uses the prompt’s zero-additive-constant convention:
 
@@ -204,6 +211,21 @@ phi_BL = phi_tilde - F_phi(r)
 ```
 
 Azimuth comparisons wrap modulo `2*pi`.
+
+The prompt's differential contract requires
+`d(phi_tilde)=d(phi_BL)+a/Delta dr`, while its later displayed antiderivative
+has a contradictory leading minus sign. Differentiating that displayed minus
+would produce `-a/Delta`. Phase 4 follows the differential contract and the
+same relation documented by SpECTRE:
+`d(phi_BL)=d(phi_tilde)-a/Delta dr`. Therefore
+
+```text
+F_phi(r) =
+  [a/(r_+-r_-)] log((r-r_+)/(r-r_-))
+```
+
+in the safe exterior overlap. A finite-difference regression checks
+`dF_phi/dr=+a/Delta` directly.
 
 The forward Jacobian is obtained from the full `Dual4` position expression.
 For `J^alpha'_mu = partial x^alpha' / partial x^mu`:

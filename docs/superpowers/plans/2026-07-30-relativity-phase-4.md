@@ -34,7 +34,9 @@
 | `src/relativity/kerr_schild_fields.h` | L1 internal | Scalar-generic stable radius, null one-form, scalar `H`, metric, and inverse expressions. |
 | `src/relativity/kerr_schild_metric.cpp` | L1 | Validate parameters/points and expose double/`Dual4` metric evaluation. |
 | `include/solar/relativity/kerr_chart_transform.h` | L1 public | Safe-overlap BL↔KS position, Jacobian, and full canonical-state transforms. |
-| `src/relativity/kerr_chart_transform.cpp` | L1 | Logarithmic coordinate functions, AD forward Jacobian, inverse mapping, and covector transformation. |
+| `src/relativity/kerr_chart_fields.h` | L1 internal | Scalar-generic logarithmic offsets and forward coordinate expression. |
+| `src/relativity/kerr_chart_transform.cpp` | L1 | Safe-overlap validation, position maps, and forward/inverse Jacobians. |
+| `src/relativity/kerr_chart_state_transform.cpp` | L1 | Full canonical covector and affine-preserving state transforms. |
 | `include/solar/relativity/kerr_schild_events.h` | L1 public | Standard outer-horizon and finite-interior event factories. |
 | `src/relativity/kerr_schild_events.cpp` | L1 | Validate event configuration and capture immutable metric values safely. |
 | `tests/relativity/test_geodesic_invariant_callbacks.cpp` | verification | Callback selection, drift, exceptions, and non-finite values. |
@@ -374,7 +376,9 @@ git commit -m "feat(relativity): differentiate Kerr-Schild inverse metric"
 
 **Files:**
 - Create: `include/solar/relativity/kerr_chart_transform.h`
+- Create: `src/relativity/kerr_chart_fields.h`
 - Create: `src/relativity/kerr_chart_transform.cpp`
+- Create: `src/relativity/kerr_chart_state_transform.cpp`
 - Create: `tests/relativity/test_kerr_chart_transform.cpp`
 
 **Interfaces:**
@@ -382,7 +386,7 @@ git commit -m "feat(relativity): differentiate Kerr-Schild inverse metric"
   coordinate/state conventions.
 - Produces: `KerrChartTransform` public methods declared in the design.
 
-- [ ] **Step 1: Write position, Jacobian, and canonical-state tests**
+- [x] **Step 1: Write position, Jacobian, and canonical-state tests**
 
 Use masses `{1,3}`, spins `{-0.8,0,0.7}`, and safe exterior points away from
 the axis. Require wrapped position round trips and:
@@ -402,7 +406,7 @@ within `<1e-10`. Include negative spin to fix the azimuth orientation.
 Require explicit failure for invalid constructor inputs, `r<=r_++margin`,
 the polar axis, non-finite inputs, and an unresolvable Jacobian.
 
-- [ ] **Step 2: Run the transform test and confirm the red state**
+- [x] **Step 2: Run the transform test and confirm the red state**
 
 Run:
 
@@ -412,7 +416,7 @@ make -j4 tests/relativity/test_kerr_chart_transform
 
 Expected: compilation fails because the transform header is absent.
 
-- [ ] **Step 3: Implement safe logarithmic coordinate functions**
+- [x] **Step 3: Implement safe logarithmic coordinate functions**
 
 For subextremal horizons `r_+` and `r_-`, use:
 
@@ -428,7 +432,12 @@ The safe-overlap check makes both arguments positive. Evaluate forward
 position with `Dual4` so its full Jacobian includes `dt_KS/dr` and
 `dphi_tilde/dr`. Use the design’s Cartesian formulas exactly.
 
-- [ ] **Step 4: Implement inverse position and canonical transforms**
+The master prompt's earlier differential contract and its later displayed
+`F_phi` sign conflict. Use the positive expression above because it alone
+differentiates to `+a/Delta`, matches the documented ingoing Kerr transform,
+and is protected by a direct finite-difference sign regression.
+
+- [x] **Step 4: Implement inverse position and canonical transforms**
 
 Recover `r` from `KerrSchildCartesianMetric`, then:
 
@@ -451,7 +460,7 @@ p_bl = transpose(J) * p_ks;
 Reject unsafe or non-finite transformations with `std::domain_error`; never
 copy or reinterpret `p_r`.
 
-- [ ] **Step 5: Run focused transform and BL metric tests**
+- [x] **Step 5: Run focused transform and BL metric tests**
 
 Run:
 
@@ -466,11 +475,13 @@ make -j4 tests/relativity/test_kerr_chart_transform \
 
 Expected: all pass with printed round-trip and Jacobian maxima below gates.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_chart_transform.h \
+  src/relativity/kerr_chart_fields.h \
   src/relativity/kerr_chart_transform.cpp \
+  src/relativity/kerr_chart_state_transform.cpp \
   tests/relativity/test_kerr_chart_transform.cpp
 git commit -m "feat(relativity): add canonical Kerr chart transforms"
 ```
