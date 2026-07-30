@@ -56,18 +56,16 @@ bool direction_matches(
     return end_value < start_value;
 }
 
+template <std::size_t N, typename Projector>
 EventEvaluation evaluate_event(
     const KerrBoyerLindquistMetric& metric,
     const KerrConstants& constants,
-    const KerrSeparatedState& directions,
-    const numerics::Dopri5DenseOutput<5>& dense_output,
+    const numerics::Dopri5DenseOutput<N>& dense_output,
     const GeodesicEvent& event,
-    double mino_parameter) {
-    KerrSeparatedState state{
-        dense_output.evaluate(mino_parameter),
-        directions.radial_direction,
-        directions.polar_direction,
-    };
+    double mino_parameter,
+    const Projector& projector) {
+    KerrSeparatedState state =
+        projector(dense_output.evaluate(mino_parameter));
     PhaseSpaceState public_state =
         reconstruct_kerr_phase_space(
             metric, constants, state);
@@ -102,13 +100,14 @@ KerrSeparatedEventHit make_hit(
     };
 }
 
+template <std::size_t N, typename Projector>
 LocatedEvent locate_event(
     std::size_t event_index,
     const GeodesicEvent& event,
     const KerrBoyerLindquistMetric& metric,
     const KerrConstants& constants,
-    const KerrSeparatedState& directions,
-    const numerics::Dopri5DenseOutput<5>& dense_output) {
+    const numerics::Dopri5DenseOutput<N>& dense_output,
+    const Projector& projector) {
     const double start_mino = dense_output.start();
     const double end_mino = dense_output.end();
     const double span = end_mino - start_mino;
@@ -126,17 +125,17 @@ LocatedEvent locate_event(
         start = evaluate_event(
             metric,
             constants,
-            directions,
             dense_output,
             event,
-            start_mino);
+            start_mino,
+            projector);
         end = evaluate_event(
             metric,
             constants,
-            directions,
             dense_output,
             event,
-            end_mino);
+            end_mino,
+            projector);
     } catch (const std::exception& error) {
         return LocatedEvent{
             KerrSeparatedEventStatus::Failed,
@@ -247,10 +246,10 @@ LocatedEvent locate_event(
             evaluation = evaluate_event(
                 metric,
                 constants,
-                directions,
                 dense_output,
                 event,
-                mino);
+                mino,
+                projector);
         } catch (const std::exception& error) {
             return LocatedEvent{
                 KerrSeparatedEventStatus::Failed,
@@ -288,14 +287,13 @@ LocatedEvent locate_event(
     };
 }
 
-} // namespace
-
-KerrSeparatedEventSelection select_first_kerr_step_event(
+template <std::size_t N, typename Projector>
+KerrSeparatedEventSelection select_first_event(
     const KerrBoyerLindquistMetric& metric,
     const KerrConstants& constants,
-    const KerrSeparatedState& directions,
-    const numerics::Dopri5DenseOutput<5>& dense_output,
-    const std::vector<GeodesicEvent>& events) {
+    const numerics::Dopri5DenseOutput<N>& dense_output,
+    const std::vector<GeodesicEvent>& events,
+    const Projector& projector) {
     std::optional<KerrSeparatedEventHit> selected;
     TerminationReason selected_reason =
         TerminationReason::UserEvent;
@@ -312,8 +310,8 @@ KerrSeparatedEventSelection select_first_kerr_step_event(
             events[index],
             metric,
             constants,
-            directions,
-            dense_output);
+            dense_output,
+            projector);
         if (located.status ==
             KerrSeparatedEventStatus::Failed) {
             return failed_selection(located.message);
@@ -343,6 +341,50 @@ KerrSeparatedEventSelection select_first_kerr_step_event(
         selected_reason,
         "geodesic event reached",
     };
+}
+
+} // namespace
+
+KerrSeparatedEventSelection select_first_kerr_step_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrSeparatedState& directions,
+    const numerics::Dopri5DenseOutput<5>& dense_output,
+    const std::vector<GeodesicEvent>& events) {
+    const auto projector =
+        [&directions](const numerics::StateN<5>& values) {
+            return KerrSeparatedState{
+                values,
+                directions.radial_direction,
+                directions.polar_direction,
+            };
+        };
+    return select_first_event(
+        metric,
+        constants,
+        dense_output,
+        events,
+        projector);
+}
+
+KerrSeparatedEventSelection select_first_kerr_phase_step_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrSeparatedState& direction_fallback,
+    const numerics::Dopri5DenseOutput<7>& dense_output,
+    const std::vector<GeodesicEvent>& events) {
+    const auto projector =
+        [&direction_fallback](
+            const KerrTurningPhaseState& phase) {
+            return project_kerr_turning_phase(
+                phase, direction_fallback);
+        };
+    return select_first_event(
+        metric,
+        constants,
+        dense_output,
+        events,
+        projector);
 }
 
 } // namespace solar::relativity::detail

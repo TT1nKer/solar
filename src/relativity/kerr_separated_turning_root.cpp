@@ -129,6 +129,12 @@ TurningRoot locate_kerr_turning_root(
         coordinate == TurningCoordinate::Radial
             ? potentials.mass()
             : 1.0;
+    const double machine_tolerance =
+        64.0 * std::numeric_limits<double>::epsilon();
+    const double internal_root_tolerance = std::min(
+        normalized_root_tolerance, machine_tolerance);
+    const double internal_potential_tolerance = std::min(
+        normalized_potential_tolerance, machine_tolerance);
     std::size_t iterations = 0;
     for (; iterations < 100; ++iterations) {
         const double allowed_potential =
@@ -137,10 +143,17 @@ TurningRoot locate_kerr_turning_root(
             potential_scale_for(coordinate, allowed_values);
         if (std::fabs(forbidden - allowed) /
                     coordinate_scale <=
-                normalized_root_tolerance &&
+                internal_root_tolerance &&
             std::fabs(allowed_potential) /
                     allowed_potential_scale <=
-                normalized_potential_tolerance) {
+                internal_potential_tolerance) {
+            break;
+        }
+        const double lower =
+            std::min(allowed, forbidden);
+        const double upper =
+            std::max(allowed, forbidden);
+        if (std::nextafter(lower, upper) == upper) {
             break;
         }
         const double forbidden_potential =
@@ -151,10 +164,6 @@ TurningRoot locate_kerr_turning_root(
             forbidden -
             forbidden_potential *
                 (forbidden - allowed) / denominator;
-        const double lower =
-            std::min(allowed, forbidden);
-        const double upper =
-            std::max(allowed, forbidden);
         const double width = upper - lower;
         if (!std::isfinite(candidate) ||
             candidate <= lower + 0.1 * width ||
@@ -199,20 +208,62 @@ TurningRoot locate_kerr_turning_root(
         };
     }
 
-    const double allowed_potential =
+    double root_coordinate = allowed;
+    KerrSeparatedPotentialValues root_values = allowed_values;
+    double root_potential =
+        potential_for(coordinate, root_values);
+    const double forbidden_potential =
+        potential_for(coordinate, forbidden_values);
+    if (std::fabs(forbidden_potential) <
+        std::fabs(root_potential)) {
+        root_coordinate = forbidden;
+        root_values = forbidden_values;
+        root_potential = forbidden_potential;
+    }
+    const double denominator =
+        forbidden_potential -
         potential_for(coordinate, allowed_values);
+    const double secant =
+        forbidden -
+        forbidden_potential *
+            (forbidden - allowed) / denominator;
+    const double lower =
+        std::min(allowed, forbidden);
+    const double upper =
+        std::max(allowed, forbidden);
+    if (std::isfinite(secant) &&
+        secant >= lower && secant <= upper) {
+        try {
+            const auto secant_values = evaluate_at(
+                coordinate,
+                secant,
+                fixed_other_coordinate,
+                potentials);
+            const double secant_potential =
+                potential_for(
+                    coordinate, secant_values);
+            if (std::fabs(secant_potential) <
+                std::fabs(root_potential)) {
+                root_coordinate = secant;
+                root_values = secant_values;
+                root_potential = secant_potential;
+            }
+        } catch (const std::exception&) {
+            // The already-bracketed finite endpoints remain authoritative.
+        }
+    }
     const double derivative =
-        derivative_for(coordinate, allowed_values);
+        derivative_for(coordinate, root_values);
     const double derivative_normalized =
         normalized_derivative(
             coordinate, derivative, potentials.mass());
-    if (std::fabs(allowed_potential) /
+    if (std::fabs(root_potential) /
                 potential_scale_for(
-                    coordinate, allowed_values) >
+                    coordinate, root_values) >
             normalized_potential_tolerance) {
         return TurningRoot{
             TurningStatus::Failed,
-            allowed,
+            root_coordinate,
             derivative_normalized,
             iterations,
             "located turning root does not meet the potential tolerance",
@@ -225,7 +276,7 @@ TurningRoot locate_kerr_turning_root(
             : TurningStatus::Simple;
     return TurningRoot{
         status,
-        allowed,
+        root_coordinate,
         derivative_normalized,
         iterations,
         status == TurningStatus::Simple

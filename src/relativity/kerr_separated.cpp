@@ -276,6 +276,20 @@ KerrSeparatedIntegrator::integrate(
     std::optional<PendingTurning> pending_turning;
     const detail::KerrSeparatedPotentials potentials(
         metric_->mass(), metric_->spin_length(), constants);
+    detail::KerrTurningPhaseState turning_phase;
+    bool turning_phase_authoritative = false;
+    try {
+        turning_phase =
+            detail::initialize_kerr_turning_phase(
+                current, potentials);
+    } catch (const std::exception& error) {
+        return terminate(
+            current_public,
+            TerminationReason::NonFiniteState,
+            std::string(
+                "turning phase initialization failed: ") +
+                error.what());
+    }
 
     while (true) {
         if (attempted_steps >= config.max_total_steps) {
@@ -302,6 +316,7 @@ KerrSeparatedIntegrator::integrate(
                         *metric_,
                         constants,
                         current,
+                        turning_phase,
                         integration_direction,
                         config);
                 released_public =
@@ -341,6 +356,8 @@ KerrSeparatedIntegrator::integrate(
             }
 
             current = release.state;
+            turning_phase = release.phase_state;
+            turning_phase_authoritative = true;
             current_public = released_public;
             current_mino += release.mino_step;
             proposed_step = std::copysign(
@@ -380,6 +397,217 @@ KerrSeparatedIntegrator::integrate(
         }
 
         ++attempted_steps;
+        if (turning_phase_authoritative) {
+            const auto phase_step =
+                detail::attempt_kerr_turning_phase_step(
+                    *metric_,
+                    constants,
+                    potentials,
+                    turning_phase,
+                    current_mino,
+                    attempted_step,
+                    config);
+            if (phase_step.status !=
+                    numerics::Dopri5StepResult<7>::
+                        Status::Completed ||
+                !phase_step.accepted) {
+                ++diagnostics.rejected_steps;
+                ++consecutive_rejections;
+                last_rejection =
+                    phase_step.status ==
+                            numerics::Dopri5StepResult<7>::
+                                Status::Completed
+                        ? RejectionKind::ErrorEstimate
+                        : RejectionKind::NonFiniteStage;
+                proposed_step =
+                    phase_step.status ==
+                            numerics::Dopri5StepResult<7>::
+                                Status::Completed
+                        ? phase_step.next_step
+                        : attempted_step *
+                              config.dopri5.min_factor;
+                if (consecutive_rejections >=
+                    config.max_rejections_per_step) {
+                    return terminate(
+                        current_public,
+                        rejection_reason(last_rejection),
+                        rejection_message(
+                            last_rejection,
+                            "reached the rejection limit"));
+                }
+                continue;
+            }
+            if (!phase_step.dense_output.has_value()) {
+                return terminate(
+                    current_public,
+                    TerminationReason::NonFiniteState,
+                    "accepted turning phase step has no dense output");
+            }
+
+            const auto selected_event =
+                detail::select_first_kerr_phase_step_event(
+                    *metric_,
+                    constants,
+                    current,
+                    *phase_step.dense_output,
+                    active_events);
+            if (selected_event.status ==
+                detail::KerrSeparatedEventStatus::Failed) {
+                return terminate(
+                    current_public,
+                    TerminationReason::EventRootFailure,
+                    selected_event.message);
+            }
+
+            const double accepted_mino =
+                selected_event.hit.has_value()
+                    ? selected_event.hit->mino_parameter
+                    : current_mino + attempted_step;
+            const auto accepted_phase =
+                phase_step.dense_output->evaluate(
+                    accepted_mino);
+            const detail::KerrSeparatedState accepted =
+                detail::project_kerr_turning_phase(
+                    accepted_phase, current);
+            PhaseSpaceState accepted_public;
+            std::optional<EventHit> public_hit;
+            if (selected_event.hit.has_value()) {
+                accepted_public =
+                    selected_event.hit->public_hit.state;
+                public_hit =
+                    selected_event.hit->public_hit;
+            } else {
+                try {
+                    accepted_public =
+                        detail::reconstruct_kerr_phase_space(
+                            *metric_, constants, accepted);
+                } catch (const std::exception& error) {
+                    return terminate(
+                        current_public,
+                        TerminationReason::NonFiniteState,
+                        std::string(
+                            "accepted turning phase state failed: ") +
+                            error.what());
+                }
+            }
+
+            const double accepted_step_magnitude =
+                std::fabs(accepted_mino - current_mino);
+            if (public_hit.has_value() &&
+                accepted_step_magnitude == 0.0) {
+                return terminate(
+                    accepted_public,
+                    selected_event.reason,
+                    "geodesic event is at the current state",
+                    public_hit);
+            }
+            if (!finite_phase_space(accepted_public) ||
+                !metric_->valid_point(accepted_public.x)) {
+                return terminate(
+                    current_public,
+                    TerminationReason::InvalidMetricPoint,
+                    "accepted turning phase state is outside Kerr BL");
+            }
+            double additional_minimum_radius =
+                std::numeric_limits<double>::quiet_NaN();
+            for (const detail::TurningCoordinate coordinate :
+                 {detail::TurningCoordinate::Radial,
+                  detail::TurningCoordinate::Polar}) {
+                const bool locked =
+                    coordinate ==
+                            detail::TurningCoordinate::Radial
+                        ? current.radial_direction ==
+                              detail::SeparatedDirection::Locked
+                        : current.polar_direction ==
+                              detail::SeparatedDirection::Locked;
+                if (locked) {
+                    continue;
+                }
+                const auto crossing =
+                    detail::locate_kerr_turning_phase_crossing(
+                        coordinate,
+                        potentials,
+                        *phase_step.dense_output,
+                        accepted_mino,
+                        config.potential_tolerance,
+                        config
+                            .critical_derivative_tolerance);
+                if (!crossing.has_value()) {
+                    continue;
+                }
+                if (crossing->status ==
+                    detail::TurningStatus::Failed) {
+                    return terminate(
+                        current_public,
+                        TerminationReason::EventRootFailure,
+                        crossing->message);
+                }
+                if (crossing->status ==
+                    detail::TurningStatus::NearCritical) {
+                    const auto critical_phase =
+                        phase_step.dense_output->evaluate(
+                            crossing->mino_parameter);
+                    const auto critical_separated =
+                        detail::project_kerr_turning_phase(
+                            critical_phase, current);
+                    PhaseSpaceState critical_public;
+                    try {
+                        critical_public =
+                            detail::reconstruct_kerr_phase_space(
+                                *metric_,
+                                constants,
+                                critical_separated);
+                    } catch (const std::exception&) {
+                        critical_public = current_public;
+                    }
+                    return terminate(
+                        critical_public,
+                        TerminationReason::NearCriticalOrbit,
+                        crossing->message);
+                }
+                if (coordinate ==
+                    detail::TurningCoordinate::Radial) {
+                    ++diagnostics.radial_turns;
+                    additional_minimum_radius =
+                        crossing->root_radius_M;
+                } else {
+                    ++diagnostics.polar_turns;
+                }
+            }
+            try {
+                diagnostic_tracker.accept(
+                    accepted,
+                    accepted_public,
+                    accepted_step_magnitude,
+                    diagnostics,
+                    additional_minimum_radius);
+            } catch (const std::exception& error) {
+                return terminate(
+                    current_public,
+                    TerminationReason::NonFiniteState,
+                    std::string(
+                        "turning phase diagnostics failed: ") +
+                        error.what());
+            }
+
+            current = accepted;
+            turning_phase = accepted_phase;
+            current_public = accepted_public;
+            current_mino = accepted_mino;
+            if (public_hit.has_value()) {
+                return terminate(
+                    current_public,
+                    selected_event.reason,
+                    selected_event.message,
+                    public_hit);
+            }
+
+            consecutive_rejections = 0;
+            last_rejection = RejectionKind::None;
+            proposed_step = phase_step.next_step;
+            continue;
+        }
+
         detail::KerrSeparatedStepAttempt trial =
             detail::attempt_kerr_separated_step(
                 *metric_,
@@ -557,6 +785,24 @@ KerrSeparatedIntegrator::integrate(
                 current_public,
                 TerminationReason::InvalidMetricPoint,
                 "accepted separated state is outside Kerr BL");
+        }
+
+        try {
+            turning_phase =
+                detail::advance_kerr_turning_phase(
+                    *metric_,
+                    constants,
+                    potentials,
+                    turning_phase,
+                    accepted_mino - current_mino,
+                    config);
+        } catch (const std::exception& error) {
+            return terminate(
+                current_public,
+                TerminationReason::NonFiniteState,
+                std::string(
+                    "turning phase advance failed: ") +
+                    error.what());
         }
 
         try {

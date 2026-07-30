@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kerr_separated_state.h"
+#include "kerr_separated_turning.h"
 
 #include "solar/relativity/geodesic_types.h"
 
@@ -34,6 +35,13 @@ KerrSeparatedEventSelection select_first_kerr_step_event(
     const KerrConstants& constants,
     const KerrSeparatedState& directions,
     const numerics::Dopri5DenseOutput<5>& dense_output,
+    const std::vector<GeodesicEvent>& events);
+
+KerrSeparatedEventSelection select_first_kerr_phase_step_event(
+    const KerrBoyerLindquistMetric& metric,
+    const KerrConstants& constants,
+    const KerrSeparatedState& direction_fallback,
+    const numerics::Dopri5DenseOutput<7>& dense_output,
     const std::vector<GeodesicEvent>& events);
 
 } // namespace solar::relativity::detail
