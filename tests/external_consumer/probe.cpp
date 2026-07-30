@@ -1,3 +1,5 @@
+#include "solar/relativity/emission_model.h"
+#include "solar/relativity/fluid_model.h"
 #include "solar/relativity/geodesic_integrator.h"
 #include "solar/relativity/kerr_shadow.h"
 #include "solar/relativity/kerr_chart_transform.h"
@@ -5,7 +7,10 @@
 #include "solar/relativity/kerr_schild_metric.h"
 #include "solar/relativity/kerr_separated.h"
 #include "solar/relativity/local_initialization.h"
+#include "solar/relativity/minkowski_metric.h"
 #include "solar/relativity/observer.h"
+#include "solar/relativity/radiative_transfer.h"
+#include "solar/relativity/thin_disk.h"
 #include "solar/version.h"
 
 #include <algorithm>
@@ -157,6 +162,119 @@ int main() {
         return 8;
     }
 
+    const solar::relativity::MinkowskiMetric minkowski;
+    const solar::relativity::PhaseSpaceState flat_photon{
+        0.0,
+        solar::relativity::Contravariant4{
+            solar::relativity::Vec4{{0.0, 0.0, 0.0, 0.0}}},
+        solar::relativity::Covariant4{
+            solar::relativity::Vec4{{-1.0, 1.0, 0.0, 0.0}}},
+    };
+    const solar::relativity::Contravariant4 static_emitter{
+        solar::relativity::Vec4{{1.0, 0.0, 0.0, 0.0}}};
+    const auto flat_redshift =
+        solar::relativity::evaluate_redshift(
+            minkowski,
+            flat_photon,
+            static_emitter,
+            1.0);
+    const auto transfer =
+        solar::relativity::advance_backward_transfer(
+            {},
+            solar::relativity::TransferCoefficients{2.0, 0.5},
+            3.0);
+    constexpr double expected_transfer_intensity =
+        3.1074793594062806;
+    constexpr double expected_transfer_transmission =
+        0.22313016014842982;
+
+    const solar::relativity::Contravariant4 disk_point{
+        solar::relativity::Vec4{{
+            0.0, 8.0, half_pi, 0.2}}};
+    const solar::relativity::AnalyticCircularDiskConfig
+        disk_config{
+            1.0,
+            0.5,
+            solar::relativity::OrbitSense::Prograde,
+            6.0,
+            20.0,
+            1.0,
+            16.407349347422414,
+            0.0,
+            1.0e-8,
+        };
+    const solar::relativity::AnalyticCircularDiskFluid
+        disk(disk_config);
+    const auto disk_sample = disk.sample(metric, disk_point);
+    const solar::relativity::AnalyticOpticallyThinTorus torus(
+        solar::relativity::AnalyticOpticallyThinTorusConfig{
+            1.0,
+            0.5,
+            solar::relativity::OrbitSense::Prograde,
+            8.0,
+            2.0,
+            0.2,
+            3.0,
+            4.0,
+            0.0,
+            1.0e-4,
+        });
+    const auto torus_sample =
+        torus.sample(metric, disk_point);
+    const auto disk_emitter =
+        solar::relativity::make_equatorial_circular_observer(
+            metric,
+            disk_point,
+            solar::relativity::OrbitSense::Prograde);
+    if (!disk_emitter) {
+        std::cerr << "installed disk emitter construction failed\n";
+        return 9;
+    }
+    const auto disk_photon =
+        solar::relativity::initialize_local_photon(
+            metric,
+            *disk_emitter.frame,
+            solar::relativity::Vec3{{0.0, -1.0, 0.0}});
+    if (!disk_photon) {
+        std::cerr << "installed disk photon construction failed\n";
+        return 10;
+    }
+    solar::relativity::ThinDiskCrossingRecorder surface(
+        solar::relativity::ThinDiskRecorderConfig{
+            solar::relativity::DiskOpacityMode::Opaque, 8},
+        disk,
+        solar::relativity::ThinDiskSurfaceEmission(
+            0.75, 10.0 / 4096.0, 0.7));
+    const auto surface_result =
+        surface.record(metric, *disk_photon.state, 1.0);
+
+    const double transfer_error = std::max(
+        std::abs(
+            transfer.state.invariant_intensity -
+            expected_transfer_intensity),
+        std::abs(
+            transfer.state.transmission -
+            expected_transfer_transmission));
+    if (!flat_redshift ||
+        std::abs(flat_redshift.sample.redshift_g - 1.0) >
+            5.0e-14 ||
+        !transfer ||
+        !std::isfinite(transfer.state.invariant_intensity) ||
+        !std::isfinite(transfer.state.transmission) ||
+        transfer_error >= 5.0e-14 ||
+        !disk_sample.valid ||
+        !torus_sample.valid ||
+        !surface_result ||
+        !surface_result.recorded ||
+        surface.crossings().size() != 1 ||
+        !std::isfinite(disk_sample.temperature) ||
+        !std::isfinite(torus_sample.density) ||
+        !std::isfinite(
+            surface.observed().specific_intensity)) {
+        std::cerr << "installed Phase 5 transfer API failed\n";
+        return 11;
+    }
+
     std::cout << std::setprecision(17)
               << "{\"solar_version\":\"" << solar::version
               << "\",\"physics_contract\":\"" << solar::physics_contract
@@ -173,6 +291,18 @@ int main() {
               << kerr_schild.diagnostics.max_constraint_error
               << ",\"ks_inverse_error\":"
               << identity_error
+              << ",\"transfer_intensity\":"
+              << transfer.state.invariant_intensity
+              << ",\"transfer_transmission\":"
+              << transfer.state.transmission
+              << ",\"disk_temperature\":"
+              << disk_sample.temperature
+              << ",\"torus_density\":"
+              << torus_sample.density
+              << ",\"surface_specific_intensity\":"
+              << surface.observed().specific_intensity
+              << ",\"surface_crossings\":"
+              << surface.crossings().size()
               << "}\n";
     return 0;
 }

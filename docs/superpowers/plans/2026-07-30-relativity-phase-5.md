@@ -857,7 +857,7 @@ Do not create an empty commit and never commit either mutation.
 - Consumes: installed Task 1–5 public headers and symbols only.
 - Produces: clean external construction and execution evidence.
 
-- [ ] **Step 1: Extend the installed consumer**
+- [x] **Step 1: Extend the installed consumer**
 
 Include:
 
@@ -883,7 +883,7 @@ surface_crossings
 Return nonzero unless all are finite, the analytic transfer error is
 `<5e-14`, and one surface crossing is recorded.
 
-- [ ] **Step 2: Run the installed consumer**
+- [x] **Step 2: Run the installed consumer**
 
 Run:
 
@@ -894,7 +894,7 @@ make test-external-consumer
 Expected: a clean temporary install configures, builds, links, runs, prints the
 new fields, and exits zero.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/external_consumer/probe.cpp
