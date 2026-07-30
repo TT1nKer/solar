@@ -21,6 +21,8 @@
 #include "solar/iau_rotation.h"
 #include "solar/time_scale.h"
 
+#include "relativity_metric.h"
+
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -65,6 +67,7 @@ static void print_usage() {
               << "  mission <template>                     Run mission (mars|gateway|grand-tour)\n"
               << "  montecarlo <template> [--samples N]    Monte Carlo uncertainty analysis\n"
               << "  network <YYYY-MM-DD>                   Solar system transfer network\n"
+              << "  relativity metric [options]            Inspect a spacetime metric\n"
               << "\n"
               << "Physics flags (for simulate/energy):\n"
               << "  --j2             Enable J2 oblateness perturbation\n"
@@ -1233,6 +1236,10 @@ int main(int argc, char* argv[]) {
         if (cmd == "network")  return cmd_network(sub_argc, sub_argv.data());
         if (cmd == "lagrange") return cmd_lagrange(sub_argc, sub_argv.data());
         if (cmd == "halo")     return cmd_halo(sub_argc, sub_argv.data());
+        if (cmd == "relativity") {
+            return solar::cli::dispatch_relativity(
+                sub_argc, sub_argv.data());
+        }
 
         std::cerr << "Unknown command: " << cmd << "\n";
         print_usage();

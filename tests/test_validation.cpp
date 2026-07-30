@@ -23,6 +23,7 @@
 #include "solar/constants.h"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <cmath>
 
 using namespace solar;
