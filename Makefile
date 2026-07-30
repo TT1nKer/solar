@@ -19,7 +19,7 @@ TEST_SRCS := $(shell find $(TEST_DIR) -name 'test_*.cpp' -type f | sort)
 TEST_BINS := $(TEST_SRCS:.cpp=)
 DEPFILES  := $(OBJS:.o=.d) $(CLI_OBJS:.o=.d) $(TEST_BINS:=.d)
 
-.PHONY: all clean test
+.PHONY: all clean test test-external-consumer
 
 all: $(LIB) $(CLI_BIN)
 
@@ -42,6 +42,9 @@ test: $(CLI_BIN) $(TEST_BINS)
 		./$$t || status=1; \
 	done; \
 	exit $$status
+
+test-external-consumer:
+	./tests/test_external_consumer.sh
 
 $(TEST_DIR)/%: $(TEST_DIR)/%.cpp $(LIB)
 	$(CXX) $(CXXFLAGS) $(DEPFLAGS) -MF $@.d $< -L. -lsolar -o $@
