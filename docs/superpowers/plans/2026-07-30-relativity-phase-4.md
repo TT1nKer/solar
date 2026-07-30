@@ -166,7 +166,7 @@ git commit -m "feat(relativity): support chart-aware invariant monitors"
 - Consumes: `Metric`, `Mat4`, `Vec3`, `Dual4`, and `PhaseSpaceState`.
 - Produces: `KerrSchildCartesianMetric` and the two Cartesian invariant helper functions declared in the design.
 
-- [ ] **Step 1: Write metric value and domain tests**
+- [x] **Step 1: Write metric value and domain tests**
 
 For `M=2`, `chi=0.6`, sample generic exterior, axis, outer-horizon,
 just-inside-horizon, and interior points. Reconstruct
@@ -208,7 +208,7 @@ and its stationary time derivative to be exactly zero. These basic
 behavior assertions prevent an incomplete concrete `Metric` implementation;
 Task 3 supplies independent precision validation.
 
-- [ ] **Step 2: Run the focused test and confirm the red state**
+- [x] **Step 2: Run the focused test and confirm the red state**
 
 Run:
 
@@ -219,7 +219,7 @@ make -j4 tests/relativity/test_kerr_schild
 Expected: compilation fails because
 `solar/relativity/kerr_schild_metric.h` is absent.
 
-- [ ] **Step 3: Implement scalar-generic Kerr–Schild fields**
+- [x] **Step 3: Implement scalar-generic Kerr–Schild fields**
 
 In `kerr_schild_fields.h`, define a focused internal result carrying `r`,
 `H`, `l_covariant`, `g_covariant`, and `g_contravariant`. Evaluate:
@@ -242,7 +242,7 @@ g_inv[mu][nu] = eta[mu][nu] - 2*H*l_up[mu]*l_up[nu];
 Keep branch selection based on the scalar value for both `double` and
 `Dual4`.
 
-- [ ] **Step 4: Implement public validation, accessors, and derivatives**
+- [x] **Step 4: Implement public validation, accessors, and derivatives**
 
 Validate constructor parameters once. `valid_point` checks finite
 coordinates, stable `r > 64*epsilon*M`, nonzero finite denominators, and
@@ -264,7 +264,7 @@ evaluate the scalar-generic inverse once, and copy each derivative component.
 This keeps `KerrSchildCartesianMetric` fully executable at the end of Task 2;
 no placeholder exception or zero derivative is permitted.
 
-- [ ] **Step 5: Run focused and baseline metric tests**
+- [x] **Step 5: Run focused and baseline metric tests**
 
 Run:
 
@@ -280,7 +280,7 @@ make -j4 tests/relativity/test_kerr_schild \
 Expected: all tests pass and the reported maximum inverse errors satisfy the
 declared gates.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity/kerr_schild_metric.h \
@@ -302,7 +302,7 @@ git commit -m "feat(relativity): add Cartesian Kerr-Schild metric"
 - Produces: independent precision and boundary evidence; production changes
   occur only when a measured defect identifies its owning expression.
 
-- [ ] **Step 1: Write independent derivative tests**
+- [x] **Step 1: Write independent derivative tests**
 
 At exterior, axis-adjacent, safe near-horizon, and interior fixtures for
 positive and negative spin, independently seed `Dual4` coordinates and
@@ -322,11 +322,11 @@ Require componentwise relative error `<1e-12`. For every
 (-g(x+2h) + 8*g(x+h) - 8*g(x-h) + g(x-2h)) / (12*h)
 ```
 
-with `h=cbrt(epsilon)*max(M,abs(x_alpha),1)` and require scaled relative
+with `h=epsilon^(1/5)*max(M,abs(x_alpha),1)` and require scaled relative
 error `<3e-8`. Require time derivatives to be exactly zero and invalid
 points to throw.
 
-- [ ] **Step 2: Run the independent derivative acceptance test**
+- [x] **Step 2: Run the independent derivative acceptance test**
 
 Run:
 
@@ -338,7 +338,7 @@ Expected: the new independent test either passes every gate immediately or
 reports the first measured component/fixture mismatch. A first-run pass is
 valid because Task 2 already test-drove the complete concrete metric.
 
-- [ ] **Step 3: Correct only a measured derivative defect**
+- [x] **Step 3: Correct only a measured derivative defect**
 
 If a gate fails, use the printed coordinate, tensor indices, analytic value,
 AD value, and finite-difference value to locate the defect in stable radius,
@@ -347,7 +347,7 @@ single owning expression. Preserve exact tensor symmetry by assigning paired
 components from the same scalar expression; do not relax a gate or introduce
 a finite-difference production fallback.
 
-- [ ] **Step 4: Run derivative, Hamiltonian, and geodesic baseline tests**
+- [x] **Step 4: Run derivative, Hamiltonian, and geodesic baseline tests**
 
 Run:
 
@@ -362,7 +362,7 @@ make -j4 tests/relativity/test_kerr_schild_derivatives \
 
 Expected: all pass with derivative maxima below the documented gates.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/relativity/kerr_schild_metric.cpp \
