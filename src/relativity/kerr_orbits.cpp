@@ -30,6 +30,18 @@ double coordinate_rotation_sign(
                : -spin_sign;
 }
 
+double scale_orbit_radius(
+    const KerrBoyerLindquistMetric& metric,
+    double relative_radius) {
+    const double radius =
+        metric.mass() * relative_radius;
+    if (!std::isfinite(radius)) {
+        throw std::overflow_error(
+            "Kerr orbit radius exceeds the finite output range");
+    }
+    return radius;
+}
+
 CircularOrbitResult orbit_failure(std::string message) {
     return CircularOrbitResult{
         std::nullopt, std::move(message)};
@@ -43,7 +55,7 @@ double kerr_isco_radius(
     require_valid_sense(sense);
     const double spin = relative_spin_magnitude(metric);
     if (spin == 0.0) {
-        return 6.0 * metric.mass();
+        return scale_orbit_radius(metric, 6.0);
     }
 
     const double z1 =
@@ -60,7 +72,7 @@ double kerr_isco_radius(
     const double relative_radius =
         3.0 + z2 +
         (sense == OrbitSense::Prograde ? -root : root);
-    return metric.mass() * relative_radius;
+    return scale_orbit_radius(metric, relative_radius);
 }
 
 double kerr_equatorial_photon_radius(
@@ -69,7 +81,7 @@ double kerr_equatorial_photon_radius(
     require_valid_sense(sense);
     const double spin = relative_spin_magnitude(metric);
     if (spin == 0.0) {
-        return 3.0 * metric.mass();
+        return scale_orbit_radius(metric, 3.0);
     }
 
     const double acos_argument =
@@ -80,7 +92,7 @@ double kerr_equatorial_photon_radius(
          std::cos(
              (2.0 / 3.0) *
              std::acos(acos_argument)));
-    return metric.mass() * relative_radius;
+    return scale_orbit_radius(metric, relative_radius);
 }
 
 double kerr_marginally_bound_radius(
@@ -89,14 +101,14 @@ double kerr_marginally_bound_radius(
     require_valid_sense(sense);
     const double spin = relative_spin_magnitude(metric);
     if (spin == 0.0) {
-        return 4.0 * metric.mass();
+        return scale_orbit_radius(metric, 4.0);
     }
 
     const double relative_radius =
         sense == OrbitSense::Prograde
             ? 2.0 - spin + 2.0 * std::sqrt(1.0 - spin)
             : 2.0 + spin + 2.0 * std::sqrt(1.0 + spin);
-    return metric.mass() * relative_radius;
+    return scale_orbit_radius(metric, relative_radius);
 }
 
 CircularOrbitResult

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -118,6 +119,31 @@ int main() {
         check("unknown orbit sense rejected", false);
     } catch (const std::invalid_argument&) {
         check("unknown orbit sense rejected", true);
+    }
+
+    const KerrBoyerLindquistMetric huge_kerr(
+        std::numeric_limits<double>::max() / 2.0,
+        0.5);
+    try {
+        static_cast<void>(kerr_isco_radius(
+            huge_kerr, OrbitSense::Retrograde));
+        check("overflowing Kerr ISCO rejected", false);
+    } catch (const std::overflow_error&) {
+        check("overflowing Kerr ISCO rejected", true);
+    }
+    try {
+        static_cast<void>(kerr_equatorial_photon_radius(
+            huge_kerr, OrbitSense::Retrograde));
+        check("overflowing Kerr photon radius rejected", false);
+    } catch (const std::overflow_error&) {
+        check("overflowing Kerr photon radius rejected", true);
+    }
+    try {
+        static_cast<void>(kerr_marginally_bound_radius(
+            huge_kerr, OrbitSense::Retrograde));
+        check("overflowing Kerr marginal radius rejected", false);
+    } catch (const std::overflow_error&) {
+        check("overflowing Kerr marginal radius rejected", true);
     }
 
     const KerrBoyerLindquistMetric unit_schwarzschild(

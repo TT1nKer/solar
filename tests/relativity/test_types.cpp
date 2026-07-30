@@ -1,3 +1,4 @@
+#include "solar/relativity/geodesic_types.h"
 #include "solar/relativity/types.h"
 
 #include <cmath>
@@ -41,6 +42,31 @@ int main() {
           has_proper_time(GeodesicKind::TimelikeUnitMass) &&
           !has_proper_time(GeodesicKind::Null) &&
           !has_proper_time(unknown_kind));
+
+    const IntegrationDiagnostics phase_one_aggregate{
+        1,
+        2,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        TerminationReason::MaxSteps,
+        "phase-one aggregate",
+    };
+    check(
+        "Phase 1 diagnostic aggregate reason remains compatible",
+        phase_one_aggregate.reason ==
+            TerminationReason::MaxSteps);
+    check(
+        "Phase 1 diagnostic aggregate message remains compatible",
+        phase_one_aggregate.message ==
+            "phase-one aggregate");
+    check(
+        "new absolute Carter diagnostic defaults unavailable",
+        std::isnan(
+            phase_one_aggregate.max_carter_abs_error));
 
     std::cout << "\n=== Results: " << passed << " passed, " << failed
               << " failed ===\n";

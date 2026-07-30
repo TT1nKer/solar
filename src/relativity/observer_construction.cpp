@@ -1,5 +1,6 @@
 #include "solar/relativity/observer.h"
 
+#include "observer_validation.h"
 #include "solar/relativity/spacetime_algebra.h"
 
 #include <array>
@@ -9,8 +10,6 @@
 
 namespace solar::relativity {
 namespace {
-
-constexpr double tetrad_tolerance = 1.0e-10;
 
 ObserverResult observer_failure(
     ObserverError error,
@@ -78,7 +77,8 @@ ObserverResult make_arbitrary_observer(
     const double velocity_norm = metric_inner_product(
         covariant, four_velocity, four_velocity);
     if (!std::isfinite(velocity_norm) ||
-        std::fabs(velocity_norm + 1.0) > tetrad_tolerance) {
+        std::fabs(velocity_norm + 1.0) >=
+            detail::observer_tetrad_tolerance) {
         return observer_failure(
             ObserverError::FourVelocityNotUnitTimelike,
             "observer four-velocity must be unit timelike");
@@ -127,8 +127,8 @@ ObserverResult make_arbitrary_observer(
     }
 
     ObserverFrame observer{x, tetrad};
-    if (tetrad_orthonormality_error(metric, observer) >
-        tetrad_tolerance) {
+    if (tetrad_orthonormality_error(metric, observer) >=
+        detail::observer_tetrad_tolerance) {
         return observer_failure(
             ObserverError::TetradValidationFailure,
             "observer tetrad exceeds the orthonormality tolerance");

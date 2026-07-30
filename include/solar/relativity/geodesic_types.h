@@ -54,10 +54,10 @@ struct IntegrationDiagnostics {
         std::numeric_limits<double>::quiet_NaN();
     double max_carter_rel_error =
         std::numeric_limits<double>::quiet_NaN();
-    double max_carter_abs_error =
-        std::numeric_limits<double>::quiet_NaN();
     TerminationReason reason = TerminationReason::NonFiniteState;
     std::string message;
+    double max_carter_abs_error =
+        std::numeric_limits<double>::quiet_NaN();
 };
 
 using EventFunction =

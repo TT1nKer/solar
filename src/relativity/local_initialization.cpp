@@ -1,5 +1,6 @@
 #include "solar/relativity/local_initialization.h"
 
+#include "observer_validation.h"
 #include "solar/relativity/hamiltonian.h"
 #include "solar/relativity/spacetime_algebra.h"
 
@@ -38,8 +39,8 @@ InitialStateResult finish_initialization(
             "local state and affine parameter must be finite");
     }
     if (!metric.valid_point(observer.x) ||
-        tetrad_orthonormality_error(metric, observer) >
-            constraint_tolerance) {
+        tetrad_orthonormality_error(metric, observer) >=
+            detail::observer_tetrad_tolerance) {
         return initialization_failure(
             InitialStateError::InvalidObserverFrame,
             "observer frame is invalid or non-orthonormal");

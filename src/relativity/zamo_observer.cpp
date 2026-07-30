@@ -1,5 +1,6 @@
 #include "solar/relativity/observer.h"
 
+#include "observer_validation.h"
 #include "solar/relativity/kerr_bl_metric.h"
 
 #include <cmath>
@@ -85,7 +86,8 @@ ObserverResult make_zamo_observer(
         !tetrad.basis[1].v.all_finite() ||
         !tetrad.basis[2].v.all_finite() ||
         !tetrad.basis[3].v.all_finite() ||
-        tetrad_orthonormality_error(metric, observer) > 1.0e-10) {
+        tetrad_orthonormality_error(metric, observer) >=
+            detail::observer_tetrad_tolerance) {
         return zamo_failure(
             ObserverError::TetradValidationFailure,
             "ZAMO tetrad exceeds the orthonormality tolerance");

@@ -186,6 +186,27 @@ int main() {
             Vec3{{1.0, 0.0, 0.0}}).error ==
             InitialStateError::InvalidObserverFrame);
 
+    ObserverFrame outside_tetrad_gate = *observer.frame;
+    outside_tetrad_gate.tetrad.basis[0].v[0] =
+        std::sqrt(1.0 - 5.0e-11);
+    check(
+        "initialization rejects frame outside v3 tetrad gate",
+        initialize_local_photon(
+            metric,
+            outside_tetrad_gate,
+            Vec3{{1.0, 0.0, 0.0}}).error ==
+            InitialStateError::InvalidObserverFrame);
+
+    ObserverFrame inside_tetrad_gate = *observer.frame;
+    inside_tetrad_gate.tetrad.basis[0].v[0] =
+        std::sqrt(1.0 - 5.0e-13);
+    check(
+        "initialization accepts frame inside v3 tetrad gate",
+        bool(initialize_local_photon(
+            metric,
+            inside_tetrad_gate,
+            Vec3{{1.0, 0.0, 0.0}})));
+
     check(
         "non-finite affine parameter rejected",
         initialize_local_photon(

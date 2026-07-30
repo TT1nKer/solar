@@ -154,6 +154,105 @@ int main() {
             0.0);
     }
 
+    constexpr double inclined_view = 1.0471975511965976;
+    constexpr std::size_t inclined_samples = 33;
+    const std::vector<ShadowCriticalPoint> inclined_curve =
+        bardeen_shadow_curve(
+            positive_spin,
+            inclined_view,
+            inclined_samples);
+    check(
+        "inclined Kerr curve includes both visible tips",
+        inclined_curve.size() == 2 * inclined_samples - 2);
+    if (inclined_curve.size() ==
+        2 * inclined_samples - 2) {
+        check_near(
+            "inclined left tip photon radius",
+            inclined_curve.front().photon_radius,
+            2.408224077239731,
+            2.0e-15);
+        check_near(
+            "inclined left tip alpha",
+            inclined_curve.front().alpha,
+            -4.230999071965547,
+            4.0e-15);
+        check_near(
+            "inclined left tip beta",
+            inclined_curve.front().beta,
+            0.0,
+            0.0);
+        check_near(
+            "inclined right tip photon radius",
+            inclined_curve[inclined_samples - 1]
+                .photon_radius,
+            3.4421204900209483,
+            3.0e-15);
+        check_near(
+            "inclined right tip alpha",
+            inclined_curve[inclined_samples - 1].alpha,
+            6.003824294846052,
+            6.0e-15);
+        check_near(
+            "inclined right tip beta",
+            inclined_curve[inclined_samples - 1].beta,
+            0.0,
+            0.0);
+    }
+
+    const std::vector<ShadowCriticalPoint>
+        minimum_inclined_curve =
+            bardeen_shadow_curve(
+                positive_spin, inclined_view, 2);
+    check(
+        "two inclined samples still return both physical tips",
+        minimum_inclined_curve.size() == 2);
+
+    bool near_equatorial_resolved = false;
+    try {
+        const std::vector<ShadowCriticalPoint>
+            near_equatorial_curve =
+                bardeen_shadow_curve(
+                    positive_spin,
+                    half_pi + 1.0e-10,
+                    2);
+        near_equatorial_resolved =
+            near_equatorial_curve.size() == 2;
+    } catch (const std::domain_error&) {
+    }
+    check(
+        "near-equatorial visible tips remain resolvable",
+        near_equatorial_resolved);
+
+    constexpr double near_axis_view = 1.0e-3;
+    const std::vector<ShadowCriticalPoint> near_axis_curve =
+        bardeen_shadow_curve(
+            positive_spin, near_axis_view, 2);
+    check(
+        "near-axis Kerr curve resolves its narrow visible interval",
+        near_axis_curve.size() == 2);
+    if (near_axis_curve.size() == 2) {
+        check_near(
+            "near-axis left tip photon radius",
+            near_axis_curve[0].photon_radius,
+            2.882606664595796,
+            3.0e-15);
+        check_near(
+            "near-axis right tip photon radius",
+            near_axis_curve[1].photon_radius,
+            2.883828927101564,
+            3.0e-15);
+        check_near(
+            "near-axis left tip alpha",
+            near_axis_curve[0].alpha,
+            -5.119500178989135,
+            7.0e-13);
+        check_near(
+            "near-axis right tip alpha",
+            near_axis_curve[1].alpha,
+            5.121562190711024,
+            7.0e-13);
+    }
+
     const KerrBoyerLindquistMetric negative_spin(1.0, -0.5);
     const std::vector<ShadowCriticalPoint> negative_curve =
         bardeen_shadow_curve(
@@ -224,6 +323,16 @@ int main() {
         check("insufficient shadow samples rejected", false);
     } catch (const std::invalid_argument&) {
         check("insufficient shadow samples rejected", true);
+    }
+    try {
+        const KerrBoyerLindquistMetric huge_metric(
+            std::numeric_limits<double>::max() / 2.0,
+            0.5);
+        static_cast<void>(bardeen_shadow_curve(
+            huge_metric, half_pi, samples));
+        check("overflowing shadow output rejected", false);
+    } catch (const std::overflow_error&) {
+        check("overflowing shadow output rejected", true);
     }
 
     std::cout << "\n=== Results: " << passed

@@ -173,6 +173,29 @@ int main() {
             attitude).error ==
             ObserverError::FourVelocityNotUnitTimelike);
 
+    Contravariant4 outside_tetrad_gate;
+    outside_tetrad_gate.v[0] =
+        std::sqrt(1.0 - 5.0e-11);
+    check(
+        "four-velocity outside v3 tetrad gate rejected",
+        make_arbitrary_observer(
+            minkowski,
+            origin,
+            outside_tetrad_gate,
+            coordinate_seeds).error ==
+            ObserverError::FourVelocityNotUnitTimelike);
+
+    Contravariant4 inside_tetrad_gate;
+    inside_tetrad_gate.v[0] =
+        std::sqrt(1.0 - 5.0e-13);
+    check(
+        "four-velocity inside v3 tetrad gate accepted",
+        bool(make_arbitrary_observer(
+            minkowski,
+            origin,
+            inside_tetrad_gate,
+            coordinate_seeds)));
+
     const LookAtAttitude parallel_attitude{
         attitude.look_direction,
         attitude.look_direction,
