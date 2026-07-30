@@ -2,7 +2,7 @@
 
 CURRENT_PHASE: 3
 PHASE_STATE: PASSED
-LAST_VERIFIED_COMMIT: 0c67826f222ca9078c49fc64b8c91b7baf9eac5a
+LAST_VERIFIED_COMMIT: eb42b19bb32c20a294532cb2d441dc403c201d94
 LAST_VERIFIED_PLATFORM: Darwin 23.6.0 arm64 / Apple Clang 16.0.0
 LAST_VERIFIED_COMMANDS:
 - `make clean`
@@ -68,6 +68,9 @@ ACTUALLY_COMPLETED:
   `dr/dgamma,dmu/dgamma` through the square-root endpoint, localizes later
   velocity crossings, and refuses normalized phase drift above the `1e-10`
   CPU constraint gate.
+- Localizes public termination events inside the nonzero Mino interval used
+  to approach and release a turning root, so affine and coordinate limits
+  cannot be skipped by the turn transition.
 - Added render-relevant minimum radius, azimuth/winding, radial/polar residual,
   Hamiltonian-constraint, Carter-drift, accepted/rejected-step, and
   termination diagnostics.
@@ -75,9 +78,9 @@ ACTUALLY_COMPLETED:
   solver: null/timelike, both spin signs, Schwarzschild, radial return, and
   polar return. Release P95/maximum worldline error is `2.27726e-11`.
 - Proved the separated API through a clean installed external consumer.
-- Passed 2076/2076 relativity assertions across 27 executables and 67/67
+- Passed 2078/2078 relativity assertions across 27 executables and 67/67
   fixture-independent legacy assertions in release mode.
-- Passed all 163 assertions in the five Phase 3 focused executables under
+- Passed all 165 assertions in the five Phase 3 focused executables under
   AddressSanitizer and UndefinedBehaviorSanitizer.
 
 NOT_COMPLETED:

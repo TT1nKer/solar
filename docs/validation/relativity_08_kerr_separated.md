@@ -55,8 +55,8 @@ All values below are from the clean Release run. Coordinate error combines
 | null Kerr, `chi=-0.5` | `2.22047e-15` | `6.31878e-13` | `3.99680e-15` | `1.24952e-16` | `4.51691e-16` | `(0,0)` |
 | timelike Kerr, `chi=+0.5` | `2.08750e-14` | `8.02783e-13` | `1.82077e-14` | `1.20526e-16` | `9.12976e-16` | `(0,0)` |
 | null Schwarzschild | `1.48972e-15` | `1.24429e-14` | `1.33227e-15` | `1.27375e-16` | `5.53521e-16` | `(0,0)` |
-| radial return, Schwarzschild | `1.18898e-12` | `1.22805e-12` | `9.73444e-13` | `1.23681e-16` | `0` | `(1,0)` |
-| polar return, Schwarzschild | `2.27726e-11` | `2.06562e-11` | `1.52234e-11` | `1.54540e-16` | `8.26469e-16` | `(0,1)` |
+| radial return, Schwarzschild | `1.18898e-12` | `1.22805e-12` | `9.73444e-13` | `2.68304e-16` | `2.53597e-18` | `(1,0)` |
+| polar return, Schwarzschild | `2.27726e-11` | `2.06562e-11` | `1.52234e-11` | `2.66766e-16` | `2.14882e-15` | `(0,1)` |
 
 Release worldline P95 and maximum were both `2.27726e-11`. The largest
 Hamiltonian reference constraint was `8.50112e-16`; the largest Hamiltonian
@@ -70,7 +70,9 @@ time by `6.25278e-12M` and azimuth by `5.51115e-13`. The polar return recorded
 26 rejected and 469 accepted steps. The exact Schwarzschild photon-sphere
 fixture terminates as `NearCriticalOrbit` without incrementing a simple-turn
 counter. The phase-crossing unit test also verifies that a root at a step
-start is not counted twice.
+start is not counted twice. A release-interval regression terminates at an
+affine limit inside the turn transition to prove that its nonzero Mino
+interval is event-localized.
 
 ## Commands and results
 
@@ -90,10 +92,10 @@ The five Phase 3 executables were compiled separately against the sanitizer
 libraries with the same sanitizer flags and run:
 
 ```text
-clean Release relativity:  2076 passed, 0 failed across 27 executables
+clean Release relativity:  2078 passed, 0 failed across 27 executables
 clean Release legacy:        67 passed, 0 failed across 5 executables
-Phase 3 focused Release:    163 passed, 0 failed across 5 executables
-Phase 3 ASan/UBSan:          163 passed, 0 failed across 5 executables
+Phase 3 focused Release:    165 passed, 0 failed across 5 executables
+Phase 3 ASan/UBSan:          165 passed, 0 failed across 5 executables
 sanitizer worldline P95/max: 2.32107e-11 / 2.32107e-11
 external installed consumer: 4 accepted steps, constraint 1.23943e-16
 optional DE440 fixture:      skipped because data/de440.asc is absent
@@ -104,7 +106,7 @@ common-event coordinate gates and both aggregate gates to fail. The mutation
 was reverted before the passing runs.
 
 Verified implementation commit:
-`0c67826f222ca9078c49fc64b8c91b7baf9eac5a`.
+`eb42b19bb32c20a294532cb2d441dc403c201d94`.
 
 Platform: Darwin 23.6.0 arm64, Apple Clang 16.0.0. No Linux, GCC, RTX 3080, or
 DE440-data validation is claimed.
