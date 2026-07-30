@@ -83,22 +83,29 @@ AnalyticCircularDiskFluid::AnalyticCircularDiskFluid(
 FluidSample AnalyticCircularDiskFluid::sample(
     const Metric& metric,
     const Contravariant4& x) const {
-    const detail::KerrFluidPoint point =
-        detail::evaluate_kerr_circular_fluid_point(
+    const detail::KerrFluidLocation location =
+        detail::locate_kerr_fluid_point(
             metric,
             x,
             config_.mass_M,
-            config_.spin_chi,
-            config_.sense);
-    if (point.radius < inner_radius_M_ ||
-        point.radius > config_.outer_radius_M ||
-        std::fabs(point.equatorial_height) >
+            config_.spin_chi);
+    if (location.radius < inner_radius_M_ ||
+        location.radius > config_.outer_radius_M ||
+        std::fabs(location.equatorial_height) >
             config_.surface_height_tolerance) {
         return {};
     }
+    const Contravariant4 four_velocity =
+        detail::evaluate_kerr_circular_four_velocity(
+            metric,
+            x,
+            location,
+            config_.mass_M,
+            config_.spin_chi,
+            config_.sense);
 
     const double normalized_radius =
-        point.radius / inner_radius_M_;
+        location.radius / inner_radius_M_;
     const double density =
         config_.density_scale *
         std::pow(
@@ -124,7 +131,7 @@ FluidSample AnalyticCircularDiskFluid::sample(
         true,
         density,
         temperature,
-        point.caller_four_velocity,
+        four_velocity,
     };
 }
 

@@ -71,18 +71,17 @@ AnalyticOpticallyThinTorus(
 FluidSample AnalyticOpticallyThinTorus::sample(
     const Metric& metric,
     const Contravariant4& x) const {
-    const detail::KerrFluidPoint point =
-        detail::evaluate_kerr_circular_fluid_point(
+    const detail::KerrFluidLocation location =
+        detail::locate_kerr_fluid_point(
             metric,
             x,
             config_.mass_M,
-            config_.spin_chi,
-            config_.sense);
+            config_.spin_chi);
     const double radial_offset =
-        (point.radius - config_.center_radius_M) /
+        (location.radius - config_.center_radius_M) /
         config_.radial_width_M;
     const double angular_offset =
-        point.equatorial_height /
+        location.equatorial_height /
         config_.angular_width;
     const double shape = std::exp(
         -0.5 *
@@ -95,6 +94,14 @@ FluidSample AnalyticOpticallyThinTorus::sample(
     if (shape < config_.density_cutoff_fraction) {
         return {};
     }
+    const Contravariant4 four_velocity =
+        detail::evaluate_kerr_circular_four_velocity(
+            metric,
+            x,
+            location,
+            config_.mass_M,
+            config_.spin_chi,
+            config_.sense);
 
     const double density =
         config_.density_scale * shape;
@@ -110,7 +117,7 @@ FluidSample AnalyticOpticallyThinTorus::sample(
         true,
         density,
         temperature,
-        point.caller_four_velocity,
+        four_velocity,
     };
 }
 
