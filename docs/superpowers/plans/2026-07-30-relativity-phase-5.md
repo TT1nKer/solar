@@ -73,7 +73,7 @@ separate from volume coefficients so Phase 6 can feed both from accepted rays.
   `BackwardTransferState`, `TransferAdvanceResult`,
   `advance_backward_transfer`, and `specific_intensity_at_observer`.
 
-- [ ] **Step 1: Write the failing analytic test**
+- [x] **Step 1: Write the failing analytic test**
 
 Create a local harness and exercise the public API:
 
@@ -99,7 +99,7 @@ Include `A*ds=1e-12`, `A*ds=1000`, zero-length, zero coefficients, foreground
 attenuation, observer-frequency cubic conversion, and invalid negative/NaN
 inputs.
 
-- [ ] **Step 2: Run the test and confirm the red state**
+- [x] **Step 2: Run the test and confirm the red state**
 
 Run:
 
@@ -109,7 +109,7 @@ make -j4 tests/relativity/test_radiative_transfer
 
 Expected: compilation fails because `radiative_transfer.h` does not exist.
 
-- [ ] **Step 3: Declare exact transfer value types**
+- [x] **Step 3: Declare exact transfer value types**
 
 Use the design names and keep the state scalar:
 
@@ -143,7 +143,7 @@ struct BackwardTransferState {
 
 `TransferAdvanceResult::operator bool()` is true only for `None`.
 
-- [ ] **Step 4: Implement the stable formal solution**
+- [x] **Step 4: Implement the stable formal solution**
 
 Validate before calculation. For finite `tau=A*ds` use:
 
@@ -172,7 +172,7 @@ tau_new = tau_old + tau
 Reject any non-finite intensity result. Accept prior infinite optical depth
 only when prior transmission is exactly zero.
 
-- [ ] **Step 5: Run focused and regression tests**
+- [x] **Step 5: Run focused and regression tests**
 
 Run:
 
@@ -184,7 +184,7 @@ make -j4 test
 
 Expected: new analytic assertions and all baseline assertions pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add include/solar/relativity/radiative_transfer.h \
