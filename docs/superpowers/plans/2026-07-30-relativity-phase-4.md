@@ -772,7 +772,7 @@ git commit -m "test(relativity): consume Kerr-Schild public API"
 - Consumes: all Phase 4 tests and measured outputs.
 - Produces: reproducible validation record and a clean release candidate.
 
-- [ ] **Step 1: Run clean Release verification**
+- [x] **Step 1: Run clean Release verification**
 
 Run:
 
@@ -787,7 +787,7 @@ git diff --check
 Record the exact passed/failed totals and all optional skips. A required
 failure keeps Phase 4 incomplete.
 
-- [ ] **Step 2: Run focused sanitizer verification**
+- [x] **Step 2: Run focused sanitizer verification**
 
 Build the seven focused executables once with the combined sanitizers:
 
@@ -817,14 +817,14 @@ every assertion passes with no sanitizer diagnostic. Leak detection stays
 disabled because the existing macOS sanitizer validation contract excludes
 platform runtime allocations.
 
-- [ ] **Step 3: Perform a targeted mutation check**
+- [x] **Step 3: Perform a targeted mutation check**
 
 Temporarily transpose the KS covector transform in the wrong direction and
 run `test_kerr_chart_transform` plus `test_kerr_bl_ks_crosscheck`; both must
 fail. Restore the correct implementation using `apply_patch`, rerun both,
 and require green. Do not commit the mutation.
 
-- [ ] **Step 4: Self-audit architecture and test meaning**
+- [x] **Step 4: Self-audit architecture and test meaning**
 
 Check that:
 
@@ -840,7 +840,7 @@ Check that:
 - no dead code, unrelated edits, hidden fallback, or stale status item
   remains.
 
-- [ ] **Step 5: Write measured validation documentation**
+- [x] **Step 5: Write measured validation documentation**
 
 Create `docs/validation/relativity_09_kerr_schild.md` with formulas and
 conventions, fixture families, exact commands, compiler/build type, measured
@@ -851,7 +851,7 @@ verified commands, completed work, missing work, blockers, likely bugs,
 falsification commands, and `NEXT_ALLOWED_ACTION`); move Phase 4 out of
 current work only after every required gate is green.
 
-- [ ] **Step 6: Run the final release-candidate command set**
+- [x] **Step 6: Run the final release-candidate command set**
 
 Run:
 
@@ -867,7 +867,7 @@ Expected: all required tests pass, sanitizer output is clean, diff checking
 is clean, normal Release artifacts have been restored after sanitizer
 testing, and only intentional Phase 4 files are modified.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/validation/relativity_09_kerr_schild.md \
