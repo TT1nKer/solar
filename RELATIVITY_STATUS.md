@@ -260,3 +260,38 @@ NEXT_ALLOWED_ACTION:
 - Phase 6 CPU reference rendering backed by the installed Phase 5 transfer
   API. Do not begin GPU, WASM, or UI before the CPU reference and regression
   image gates pass.
+
+## Dynamic Collapse Track (branch codex/dynamic-collapse-bh)
+
+Parallel track for the star-formation / black-hole-formation collapse
+pipeline: Newtonian free-fall -> post-Newtonian corrections -> exact GR
+dust collapse, with an analytic anchor at every stage.
+
+- Milestone 01 (3D post-Newtonian collapse) — DONE:
+  - Regime A: Barnes-Hut octree gravity (theta-ladder verified), free-fall
+    cycloid anchor (<1% surface error), turbulent-cloud initial conditions
+    (Kritsuk P(k) ~ k^-2, log-normal density, rotation; FFT-verified).
+  - Regime B: field-based 1PN force (a = g[1 + 4 Phi/c^2 - v^2/c^2] -
+    4(g.v)v/c^2 via the shared monopole walk) with c->infinity reduction
+    at 1e-15, radial spot check at machine precision, perihelion
+    precession 0.0100596 vs 0.0103569 rad/orbit; spherical-limit collapse
+    regression (tracks the radial 1PN shell model to 0.94%, signed
+    coordinate-time lag 0.135% vs 0.167% analytic); per-particle
+    blending driver with compactness diagnostics and hand-off tagging.
+  - Executables: test_barnes_hut_gravity, test_collapse_freefall,
+    test_turbulent_cloud, test_turbulent_spectrum, test_pn_gravity,
+    test_collapse_pn_spherical, test_collapse_blend (all passing).
+- Milestone 02 (LTB compact stage) — DONE:
+  - LTBCollapse: per-shell LTB dust trajectories, singularity/horizon
+    times, shell-crossing monitor; OS surface observables (t_obs,
+    redshift, (1+z)^-2 luminosity tail).
+  - OS anchors: cycloid vs independent RK4 at 6.9e-12; simultaneous
+    crunch; horizon at the analytic collapse angle; t_obs log-divergence
+    coefficient 3 G M / c^3 to 0.3%; luminosity tail slope to 0.15%.
+  - N-body -> LTB hand-off: initial-radius recovery 1.7%, exact passage
+    through the hand-off state, horizon-then-singularity completion,
+    per-shell profile recovery 2.1%.
+  - Executables: test_ltb_os, test_ltb_handoff (passing).
+- Next: milestone 03 (nebula-scale multi-mass/multi-component collapse
+  on the turbulent ICs with the full blending + hand-off driver), then
+  the traceable collapse video pipeline.
