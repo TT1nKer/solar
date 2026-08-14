@@ -39,63 +39,13 @@ void PostNewtonianGravity::compute(
     const double theta = config_.opening_angle;
 
     for (std::size_t i = 0; i < bodies.size(); ++i) {
-        const Vec3& position = bodies[i].state.pos;
-
         // Newtonian field and potential of the OTHER bodies, from the
         // same monopole walk as BarnesHutGravity (same self-exclusion,
         // same opening-angle policy).
         Vec3 field{};
         double potential = 0.0;
-
-        std::vector<int> stack;
-        stack.push_back(0);
-        while (!stack.empty()) {
-            const int node_index = stack.back();
-            stack.pop_back();
-            const octree_detail::Node& node =
-                tree.nodes[static_cast<std::size_t>(node_index)];
-
-            if (node.leaf && node.particle >= 0) {
-                const int j = node.particle;
-                if (j == static_cast<int>(i)) continue;
-                const Vec3 direction =
-                    bodies[static_cast<std::size_t>(j)].state.pos - position;
-                const double distance_sq = direction.norm_sq() + softening_sq;
-                const double inverse = 1.0 / std::sqrt(distance_sq);
-                field += direction *
-                         (bodies[static_cast<std::size_t>(j)].mu *
-                          inverse * inverse * inverse);
-                potential -= bodies[static_cast<std::size_t>(j)].mu * inverse;
-                continue;
-            }
-            if (node.total_mass <= 0.0) continue;
-
-            const Vec3 direction = node.com - position;
-            const double distance = direction.norm();
-            if (distance == 0.0) {
-                for (const int child : node.children) {
-                    if (child >= 0) stack.push_back(child);
-                }
-                continue;
-            }
-            const double side = 2.0 * node.half;
-            const bool contains =
-                std::fabs(position.x - node.center.x) <= node.half &&
-                std::fabs(position.y - node.center.y) <= node.half &&
-                std::fabs(position.z - node.center.z) <= node.half;
-            if (!contains && side / distance < theta) {
-                const double node_mu = constants::G * node.total_mass;
-                const double inverse =
-                    1.0 / std::sqrt(distance * distance + softening_sq);
-                field += direction *
-                         (node_mu * inverse * inverse * inverse);
-                potential -= node_mu * inverse;
-            } else {
-                for (const int child : node.children) {
-                    if (child >= 0) stack.push_back(child);
-                }
-            }
-        }
+        octree_detail::monopole_field(tree, bodies, i, softening_sq, theta,
+                                      field, potential);
 
         const Vec3& velocity = bodies[i].state.vel;
         const double epsilon = -potential / c_sq;  // G M_enc / (r c^2)
