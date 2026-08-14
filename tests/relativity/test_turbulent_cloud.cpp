@@ -10,6 +10,7 @@ using solar::dynamics::TurbulentCloudGenerator;
 
 namespace {
 
+constexpr double parsec_km = 3.085677581e13;  // km
 
 int failures = 0;
 
