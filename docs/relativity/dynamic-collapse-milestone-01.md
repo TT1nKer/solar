@@ -1,6 +1,6 @@
 # Dynamic Collapse Track — Milestone 01 (revised): 3D Post-Newtonian Collapse of a Turbulent Rotating Cloud
 
-Status: Regime A complete — Barnes-Hut tree gravity, the free-fall cycloid anchor, and the turbulent-cloud initial-condition generator (Kritsuk spectrum, log-normal density, rotation) are implemented and passing. Regime B in progress: the field-based 1PN force is in with its analytic anchors (c -> infinity reduction, radial spot check, perihelion precession) and the spherical-limit collapse regression passing; remaining is the per-particle blending driver and the eps_hi hand-off declaration.
+Status: Regime A complete — Barnes-Hut tree gravity, the free-fall cycloid anchor, and the turbulent-cloud initial-condition generator (Kritsuk spectrum, log-normal density, rotation) are implemented and passing. Regime B complete for milestone 01: the field-based 1PN force with its analytic anchors (c -> infinity reduction, radial spot check, perihelion precession), the spherical-limit collapse regression, and the per-particle blending driver (smoothstep Newton -> 1PN windows with compactness diagnostics and hand-off tagging) all pass. Next: milestone 02 (LTB compact stage) with the eps_hi OS/LTB hand-off test.
 Branch: codex/dynamic-collapse-bh
 Supersedes: the spherical-dust draft of the same milestone name.
 
@@ -65,12 +65,17 @@ recover the spherical limit (documented in commit dae5598). 2PN (with
 the true cross-body terms of the Einstein-Infeld-Hoffmann Lagrangian)
 is a follow-up layer on the same field formulation.
 
-Blending policy (per particle, smooth):
+Blending policy (per particle, smooth) — implemented as
+PnCollapseForce (include/solar/dynamics/pn_collapse.h):
 - eps < eps_lo (~1e-4): pure Newtonian
-- eps_lo <= eps <= eps_hi (~0.05): Newton + 1PN (+2PN near the top),
-  smoothstep-weighted
-- eps > eps_hi: terminal core hand-off to the compact-stage milestone
-  (LTB), matched in position, velocity, and enclosed mass
+- eps_lo <= eps <= eps_hi (~0.05): Newton + 1PN, smoothstep-weighted
+- eps >= eps_hi: full 1PN, subject to the validity fade; the hand-off
+  to the compact-stage milestone (LTB) is exposed through
+  handoff_candidates(), which tags particles with eps >= eps_hi
+  (verified to extract the central region: 475/1024 tagged vs the
+  analytic 46.5% at the 1.2 eps0 test boundary). Degenerate windows
+  reduce the driver to the un-blended 1PN force or to pure Newtonian
+  tree gravity (verified to 1e-12 in test_collapse_blend).
 
 Verification (status):
 - DONE — c -> infinity limit: PN force -> Newtonian, deviation ~1e-15
@@ -82,6 +87,12 @@ Verification (status):
 - DROPPED — 1PN conserved energy integral: the standard-gauge acceleration
   is not the gradient of the harmonic Lagrangian, so no exact first
   integral exists in this form; energy diagnostics stay Newtonian
+- DONE — blending driver: window reductions (full 1PN / pure Newtonian)
+  at 1e-12, per-particle compactness anchors (surface shell mean within
+  0.3% of the analytic value, center at the 1.5 eps0 maximum), hand-off
+  tagging statistics, and a blended collapse whose surface tracks
+  between the Newtonian and full-1PN legs with growing total compactness
+  (tests/relativity/test_collapse_blend.cpp)
 - DONE — SPHERICAL-LIMIT REGRESSION: a 2048-particle spherical cloud run
   through the full 3D PN pipeline tracks the radial 1PN shell model to
   0.94% (gate 2%) through the weak-field phase (0.35 t_ff, eps 5e-3 ->
@@ -116,9 +127,10 @@ angular-momentum gate (J << G M^2 / c).
 
 ## Deliverables
 
-- include/solar/dynamics/pn_collapse.h: 3D PN force laws, per-particle
-  blending policy, compactness diagnostics, conservation monitors
-- tree/FMM gravity core for multi-mass particles (Solar nbody extension)
+- DONE — include/solar/dynamics/pn_collapse.h: 3D PN force laws (field
+  based), per-particle blending policy, compactness diagnostics,
+  hand-off tagging; tree gravity core shared via
+  include/solar/dynamics/barnes_hut_octree.h
 - tests/relativity/test_dynamic_collapse_*.cpp: one executable per anchor
   (Newtonian special cases, PN error scaling, spherical-limit regression)
 - docs/validation/dynamic_collapse_01_pn.md with measured numbers
