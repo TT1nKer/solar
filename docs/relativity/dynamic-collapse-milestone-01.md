@@ -1,6 +1,6 @@
 # Dynamic Collapse Track — Milestone 01 (revised): 3D Post-Newtonian Collapse of a Turbulent Rotating Cloud
 
-Status: Regime A in progress — Barnes-Hut tree gravity, the free-fall cycloid anchor, and the turbulent-cloud initial-condition generator (Kritsuk spectrum, log-normal density, rotation) are implemented and passing
+Status: Regime A complete — Barnes-Hut tree gravity, the free-fall cycloid anchor, and the turbulent-cloud initial-condition generator (Kritsuk spectrum, log-normal density, rotation) are implemented and passing. Regime B in progress: the field-based 1PN force is in with its analytic anchors (c -> infinity reduction, radial spot check, perihelion precession) and the spherical-limit collapse regression passing; remaining is the per-particle blending driver and the eps_hi hand-off declaration.
 Branch: codex/dynamic-collapse-bh
 Supersedes: the spherical-dust draft of the same milestone name.
 
@@ -45,11 +45,25 @@ Anchors (spherical special cases only):
 
 ### Regime B: post-Newtonian corrections (the gradual Newton -> GR path)
 
-Full 3D 1PN (then 2PN) N-body accelerations from the standard
-post-Newtonian expansion (Blanchet/Will forms): velocity-dependent and
-cross-body terms, per pair, with per-particle compactness
+Full 3D 1PN accelerations in the standard PN gauge, evaluated per
+particle through the Newtonian field g and potential Phi of the other
+bodies (the same Barnes-Hut octree walk as Regime A):
 
-    eps_i = max_j [ G m_j / (r_ij c^2) ],   beta_i = v_i / c
+    a_i = g_i [1 + 4 Phi_i / c^2 - v_i^2 / c^2] - 4 (g_i . v_i) v_i / c^2
+
+with per-particle compactness and velocity
+
+    eps_i = -Phi_i / c^2 = G M_enc / (r_i c^2),   beta_i = v_i / c.
+
+This field form is exactly the classical test-particle acceleration for
+a single source (all analytic anchors carry over), and it reproduces the
+mean-field spherical limit r'' = -(G M / r^2) [1 - 4 G M / (r c^2) -
+5 v^2 / c^2] for an extended cloud. The pairwise test-particle form was
+rejected on exactly this point: its static term scales per pair and
+misses the enclosed-mass O(G M / (r c^2)) correction, so it cannot
+recover the spherical limit (documented in commit dae5598). 2PN (with
+the true cross-body terms of the Einstein-Infeld-Hoffmann Lagrangian)
+is a follow-up layer on the same field formulation.
 
 Blending policy (per particle, smooth):
 - eps < eps_lo (~1e-4): pure Newtonian
@@ -58,16 +72,25 @@ Blending policy (per particle, smooth):
 - eps > eps_hi: terminal core hand-off to the compact-stage milestone
   (LTB), matched in position, velocity, and enclosed mass
 
-Verification:
-- c -> infinity limit: PN trajectory -> Newtonian, deviation O(eps)
-- two-body weak field: 1PN/2PN vs exact Schwarzschild geodesic (Solar
-  already integrates these), error scaling ~ eps^2 / eps^3
-- perihelion precession: Mercury 43 arcsec/century (existing Solar
-  gr_correction cross-check, now as a two-body PN property)
-- 1PN conserved energy integral drift < gate
-- SPHERICAL-LIMIT REGRESSION: a spherical dust cloud run through the full
-  3D PN pipeline must reproduce the radial 1PN EOM and, at eps_hi, match
-  the OS/LTB surface trajectory to the declared PN error order
+Verification (status):
+- DONE — c -> infinity limit: PN force -> Newtonian, deviation ~1e-15
+  (tests/relativity/test_pn_gravity.cpp)
+- DONE — radial spot check against the standard-gauge closed form at
+  machine precision (same test)
+- DONE — perihelion precession: 6 pi G M / (a (1-e^2) c^2) per orbit,
+  measured 0.0100596 vs 0.0103569 rad/orbit (2.9%, Verlet discretization)
+- DROPPED — 1PN conserved energy integral: the standard-gauge acceleration
+  is not the gradient of the harmonic Lagrangian, so no exact first
+  integral exists in this form; energy diagnostics stay Newtonian
+- DONE — SPHERICAL-LIMIT REGRESSION: a 2048-particle spherical cloud run
+  through the full 3D PN pipeline tracks the radial 1PN shell model to
+  0.94% (gate 2%) through the weak-field phase (0.35 t_ff, eps 5e-3 ->
+  5.4e-3), reproduces the signed standard-gauge coordinate-time lag
+  behind the Newtonian cycloid (0.135% of R0 measured vs 0.167%
+  analytic), and shows growing surface compactness
+  (tests/relativity/test_collapse_pn_spherical.cpp)
+- PENDING — at eps_hi, match the OS/LTB surface trajectory to the
+  declared PN error order: that is the milestone-02 hand-off test
 
 ### Regime C (next milestone, declared here for continuity): LTB compact stage
 
