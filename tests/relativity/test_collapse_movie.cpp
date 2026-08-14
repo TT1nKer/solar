@@ -99,7 +99,7 @@ const unsigned char font[68][7] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00}, // space
     {0x00,0x00,0x00,0x00,0x00,0x04,0x04}, // .
     {0x00,0x04,0x04,0x1F,0x04,0x04,0x00}, // :
-    {0x11,0x0A,0x04,0x0A,0x11,0x00,0x00}, // |
+    {0x04,0x04,0x04,0x04,0x04,0x04,0x04}, // |
     {0x00,0x00,0x00,0x1F,0x00,0x00,0x00}, // =
     {0x00,0x04,0x02,0x01,0x02,0x04,0x00}, // <
     {0x00,0x01,0x02,0x04,0x02,0x01,0x00}, // >
@@ -149,6 +149,39 @@ struct Frame {
         rgb[i + 2] = static_cast<unsigned char>(
             std::min(255.0, rgb[i + 2] + b * a));
     }
+    // Gaussian splat for a particle: soft, additive, brighter than a
+    // single pixel so sparse clouds read as nebulosity.
+    void splat(double cx, double cy, int r, int g, int b, double a) {
+        const int x0 = static_cast<int>(cx) - 2;
+        const int y0 = static_cast<int>(cy) - 2;
+        for (int dy = 0; dy <= 4; ++dy) {
+            for (int dx = 0; dx <= 4; ++dx) {
+                const double d2 = (dx - 2) * (dx - 2) +
+                                  (dy - 2) * (dy - 2);
+                blend(x0 + dx, y0 + dy, r, g, b,
+                      a * std::exp(-0.5 * d2));
+            }
+        }
+    }
+    // Deep-space gradient background with fixed stars.
+    void background(const std::vector<std::array<int, 3>>& stars) {
+        for (int y = 0; y < height; ++y) {
+            const double shade = 0.55 + 0.45 * y / height;
+            const std::size_t row = static_cast<std::size_t>(y) * width * 3;
+            for (int x = 0; x < width; ++x) {
+                rgb[row + static_cast<std::size_t>(x) * 3] =
+                    static_cast<unsigned char>(8 * shade);
+                rgb[row + static_cast<std::size_t>(x) * 3 + 1] =
+                    static_cast<unsigned char>(12 * shade);
+                rgb[row + static_cast<std::size_t>(x) * 3 + 2] =
+                    static_cast<unsigned char>(26 * shade);
+            }
+        }
+        for (const auto& star : stars) {
+            blend(star[0], star[1], star[2], star[2], star[2] * 1.2,
+                  0.8);
+        }
+    }
     void ring(double cx, double cy, double radius_px, int r, int g, int b) {
         const int r0 = static_cast<int>(radius_px);
         for (int dy = -r0; dy <= r0; ++dy) {
@@ -157,6 +190,22 @@ struct Frame {
                 if (std::abs(d - radius_px) < 1.5) {
                     blend(static_cast<int>(cx) + dx,
                           static_cast<int>(cy) + dy, r, g, b, 1.0);
+                }
+            }
+        }
+    }
+    // Soft glowing ring: wide faint halo + bright core line.
+    void glow_ring(double cx, double cy, double radius_px, int r, int g,
+                   int b) {
+        const int r0 = static_cast<int>(radius_px);
+        for (int dy = -r0 - 4; dy <= r0 + 4; ++dy) {
+            for (int dx = -r0 - 4; dx <= r0 + 4; ++dx) {
+                const double d = std::sqrt(dx * dx + dy * dy);
+                const double gap = std::abs(d - radius_px);
+                if (gap < 4.0) {
+                    blend(static_cast<int>(cx) + dx,
+                          static_cast<int>(cy) + dy, r, g, b,
+                          std::exp(-0.35 * gap * gap));
                 }
             }
         }
@@ -346,6 +395,14 @@ int main(int argc, char** argv) {
     const int frames = 120;
     Sidecar sidecar;
     char path[512];
+    std::mt19937 star_rng(1234);
+    std::vector<std::array<int, 3>> stars;
+    for (int i = 0; i < 500; ++i) {
+        const int x = static_cast<int>(star_rng() % width);
+        const int y = static_cast<int>(star_rng() % height);
+        const int b = 15 + static_cast<int>(star_rng() % 90);
+        stars.push_back({x, y, b});
+    }
 
     // ---------------- Stage 1: nebula-scale collapse -------------------
     {
@@ -373,25 +430,30 @@ int main(int argc, char** argv) {
             PnCollapseForce::Config{0.5, 1.0e-3 * parsec_km,
                                     1.0e-4, 0.05, 0.1},
             0.0));
-        const double energy0 = sim.total_energy();
         int frame_index = 0;
         sim.run(duration, t_sing / 4000.0, duration / frames,
                 [&](double t, const std::vector<Body>& current) {
                     Frame frame;
-                    const double box = 1.3 * parsec_km;
+                    frame.background(stars);
+                    // Exponential zoom: 1.3 pc down to 0.12 pc, so the
+                    // core collapse is actually visible.
+                    const double box_start = 1.3 * parsec_km;
+                    const double box_end = 0.12 * parsec_km;
+                    const double box = box_start * std::pow(
+                        box_end / box_start, t / duration);
                     for (const Body& body : current) {
                         int x, y;
                         project(body.state.pos, box, x, y);
                         const double v = body.state.vel.norm();
                         const double heat = std::min(1.0, v / 1.5);
                         if (body.name == "clump") {
-                            frame.blend(x, y, 210 + 45 * heat,
-                                        185 - 90 * heat, 90, 0.9);
+                            frame.splat(x, y, 225 + 30 * heat,
+                                        195 - 95 * heat, 85, 0.8);
                         } else if (body.name == "buffer") {
-                            frame.blend(x, y, 85, 105, 135, 0.4);
+                            frame.splat(x, y, 95, 120, 150, 0.5);
                         } else {
-                            frame.blend(x, y, 55 + 60 * heat,
-                                        60 + 45 * heat, 75, 0.2);
+                            frame.splat(x, y, 60 + 60 * heat,
+                                        65 + 50 * heat, 80, 0.28);
                         }
                     }
                     double r_core = 0.0;
@@ -402,11 +464,10 @@ int main(int argc, char** argv) {
                     const double eps = gm_core / (r_core * c * c);
                     char caption[200];
                     std::snprintf(caption, sizeof(caption),
-                        "STAGE 1  turbulent nebula collapse | t=%.2f "
-                        "t_sing | R_core=%.2f r_c | eps=%.2e | "
-                        "E/E0=%.4f",
-                        t / t_sing, r_core / r_c, eps,
-                        sim.total_energy() / energy0);
+                        "STAGE 1  nebula collapse | t=%.2f t_sing | "
+                        "R_core=%.2f r_c | FOV=%.2f pc | eps=%.2e",
+                        t / t_sing, r_core / r_c, box / parsec_km,
+                        eps);
                     frame.text(12, 14, caption);
                     std::snprintf(path, sizeof(path),
                                   "%s%snebula-%03d.ppm",
@@ -437,24 +498,25 @@ int main(int argc, char** argv) {
         sim.add_force(std::make_unique<PostNewtonianGravity>(
             PostNewtonianGravity::Config{0.5, 1.0e-3 * radius0, 0.0},
             0.0));
-        const double energy0 = sim.total_energy();
         int frame_index = 0;
         sim.run(duration, t_ff / 8000.0, duration / frames,
                 [&](double t, const std::vector<Body>& current) {
                     Frame frame;
-                    const double box = 2.5 * radius0;
+                    frame.background(stars);
+                    // Zoom 3 R0 -> 1.1 R0 so the shrinking ball stays
+                    // framed; the horizon ring stays visible.
+                    const double box = (3.0 - 1.9 * t / duration) *
+                                       radius0;
                     for (const Body& body : current) {
                         int x, y;
                         project(body.state.pos, box, x, y);
                         const double v = body.state.vel.norm();
                         const double heat = std::min(1.0, v / 0.15);
-                        frame.blend(x, y, 200 + 55 * heat,
-                                    170 - 100 * heat, 80, 0.85);
+                        frame.splat(x, y, 215 + 40 * heat,
+                                    175 - 105 * heat, 75, 0.75);
                     }
-                    // The horizon-to-be: R = 2 G M / c^2, a fixed ring
-                    // at the center of the frame.
                     frame.ring(width / 2.0, height / 2.0,
-                               (2.0 * rg / box) * width, 220, 60, 60);
+                               (2.0 * rg / box) * width, 225, 65, 65);
                     double r_max = 0.0;
                     for (const Body& body : current) {
                         r_max = std::max(r_max, body.state.pos.norm());
@@ -463,9 +525,8 @@ int main(int argc, char** argv) {
                     char caption[200];
                     std::snprintf(caption, sizeof(caption),
                         "STAGE 2  1PN compact collapse | t=%.2f t_ff | "
-                        "R=%.3f R0 | eps=%.3e | E/E0=%.4f",
-                        t / t_ff, r_max / radius0, eps,
-                        sim.total_energy() / energy0);
+                        "R=%.3f R0 | FOV=%.2f R0 | eps=%.3e",
+                        t / t_ff, r_max / radius0, box / radius0, eps);
                     frame.text(12, 14, caption);
                     std::snprintf(path, sizeof(path),
                                   "%s%scompact-%03d.ppm",
@@ -488,7 +549,8 @@ int main(int argc, char** argv) {
         const double radius0 = 200.0 * rg;
         const double t_ff = solar::dynamics::os_collapse_time(radius0, mass);
         const double r_obs = 1.0e6 * radius0;
-        for (int frame_index = 0; frame_index < frames; ++frame_index) {
+        int frame_index = 0;
+        for (; frame_index < frames; ++frame_index) {
             // Sample log-uniformly in delta = R / (2 G M / c^2) - 1 so
             // the freeze-out (the last ~1% of the collapse) is resolved:
             // the redshift and t_obs diverge exactly there.
@@ -502,45 +564,50 @@ int main(int argc, char** argv) {
             const double tau = t_ff * (theta_angle +
                                        std::sin(theta_angle)) / pi;
             Frame frame;
+            frame.background(stars);
             const double box = 2.5 * radius0;
-            // The collapsing surface.
+            // The collapsing surface with a glow whose color tracks the
+            // redshift: blue -> red as 1 + z explodes.
             const double r_surface =
                 solar::dynamics::os_surface_radius(radius0, mass, tau);
             const double one_plus_z = std::min(
                 1.0e4, solar::dynamics::os_surface_redshift(
                            radius0, mass, tau, r_obs));
             const double z_norm = std::log10(one_plus_z) / 4.0;  // 0..1
-            frame.ring(width / 2.0, height / 2.0,
-                       (r_surface / box) * width,
-                       static_cast<int>(80 + 175 * z_norm),
-                       static_cast<int>(140 - 100 * z_norm),
-                       static_cast<int>(200 - 175 * z_norm));
+            frame.glow_ring(width / 2.0, height / 2.0,
+                            (r_surface / box) * width,
+                            static_cast<int>(90 + 165 * z_norm),
+                            static_cast<int>(150 - 110 * z_norm),
+                            static_cast<int>(220 - 190 * z_norm));
             // The horizon ring (fixed).
-            frame.ring(width / 2.0, height / 2.0,
-                       (2.0 * rg / box) * width, 235, 90, 90);
-            // Observer-time curve: t_obs(tau) rising to infinity, and
-            // the luminosity tail falling exponentially, as strip charts.
+            frame.glow_ring(width / 2.0, height / 2.0,
+                            (2.0 * rg / box) * width, 235, 90, 90);
+            // Scrolling observer charts: t_obs diverges (blue), the
+            // luminosity decays (orange) as the surface freezes.
             const double t_obs =
                 solar::dynamics::os_observed_time(radius0, mass, tau,
                                                   r_obs);
             const double lum = solar::dynamics::os_luminosity(
                 radius0, mass, tau, r_obs);
             const int chart_x0 = 60;
-            const int chart_y = 460;
-            const double t_norm = std::min(1.0, t_obs / (300.0 * t_ff));
-            frame.fill_rect(chart_x0,
-                            chart_y - static_cast<int>(60 * t_norm),
-                            chart_x0 + 3, chart_y, 120, 200, 255, 0.9);
+            const int chart_y = 500;
+            frame.fill_rect(56, 386, 336, 518, 20, 28, 48, 0.55);
+            const double t_norm = std::min(1.0, t_obs / (1000.0 * t_ff));
             const double l_norm = std::max(
                 0.0, std::min(1.0, 1.0 + std::log10(std::max(lum, 1e-12)) /
                                       12.0));
-            frame.fill_rect(chart_x0 + 8,
-                            chart_y - static_cast<int>(60 * l_norm),
-                            chart_x0 + 11, chart_y, 255, 180, 90, 0.9);
+            const int cx = chart_x0 + static_cast<int>(
+                240.0 * frame_index / (frames - 1));
+            frame.fill_rect(cx, chart_y - static_cast<int>(100 * t_norm),
+                            cx + 2, chart_y, 120, 200, 255, 0.95);
+            frame.fill_rect(cx + 6,
+                            chart_y - static_cast<int>(100 * l_norm),
+                            cx + 8, chart_y, 255, 170, 90, 0.95);
+            frame.text(64, 394, "t_obs (blue) and L (orange)");
             char caption[200];
             std::snprintf(caption, sizeof(caption),
                 "STAGE 3  GR horizon | tau=%.3f t_ff | R=%.3f R0 | "
-                "1+z=%.2e | t_obs diverges, L decays",
+                "1+z=%.2e | frozen star",
                 tau / t_ff, r_surface / radius0, one_plus_z);
             frame.text(12, 14, caption);
             std::snprintf(path, sizeof(path), "%s%shorizon-%03d.ppm",
@@ -549,7 +616,7 @@ int main(int argc, char** argv) {
             sidecar.add("horizon", frame_index, tau, r_surface,
                         gm / (r_surface * c * c), 0.0, 0.0, caption);
         }
-        check("stage 3 rendered 120 frames", true);
+        check("stage 3 rendered 120 frames", frame_index == frames);
     }
 
     sidecar.write(out_dir + sep + "collapse-movie.json");
