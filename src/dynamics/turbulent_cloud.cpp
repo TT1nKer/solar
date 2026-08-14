@@ -240,13 +240,39 @@ TurbulentCloudGenerator::Realization TurbulentCloudGenerator::generate() const {
         for (double& mass : masses) mass = total_mass / masses.size();
     }
 
-    const double omega = config.rotation_omega_per_myr / myr_s;
+    const double omega0 = config.rotation_omega_per_myr / myr_s;
+    const double quiescent_radius_km =
+        config.quiescent_core_radius_pc * parsec_km;
     realization.particles.reserve(positions.size());
     double velocity_sum_sq = 0.0;
     Vec3 angular_momentum{};
     for (std::size_t i = 0; i < positions.size(); ++i) {
         Vec3 velocity = impl.turbulent_velocity(positions[i]);
-        // Solid-body rotation around the z axis.
+        // Optional quiescent core: damp the turbulent velocity inside
+        // the core radius with a smoothstep in (r / R_q)^2, so embedded
+        // dense cores are the coherent end of the turbulent cascade.
+        if (quiescent_radius_km > 0.0) {
+            const double r = positions[i].norm();
+            if (r < quiescent_radius_km) {
+                const double x = r / quiescent_radius_km;
+                velocity = velocity * (x * x * (3.0 - 2.0 * x));
+            }
+        }
+        // Rotation around the z axis with the profile
+        // omega(r) = omega0 max(0, (r - R_c) / (R - R_c))^p:
+        // p = 0 and no cutoff is solid body; a cutoff decouples the
+        // embedded core from the cloud's rotation (BH-formation gate).
+        double omega = omega0;
+        const double cutoff_km = config.rotation_core_cutoff_pc * parsec_km;
+        if (config.rotation_profile_power != 0.0 || cutoff_km > 0.0) {
+            const double r = positions[i].norm();
+            const double scale = impl.radius_km - cutoff_km;
+            const double x = scale > 0.0
+                ? (r - cutoff_km) / scale
+                : 0.0;
+            omega = omega0 *
+                std::pow(std::max(0.0, x), config.rotation_profile_power);
+        }
         velocity += Vec3{
             -omega * positions[i].y, omega * positions[i].x, 0.0};
         velocity_sum_sq += velocity.norm_sq();

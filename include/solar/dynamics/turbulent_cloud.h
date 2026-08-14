@@ -29,7 +29,17 @@ public:
         double velocity_spectral_index = -2.0; // E(k) ~ k^n
         double mach_number = 8.0;      // v_rms = mach * c_s
         double sound_speed_km_s = 0.19;        // ~10 K molecular gas
-        double rotation_omega_per_myr = 0.6;   // solid-body rotation rate
+        double rotation_omega_per_myr = 0.6;   // rotation rate at the edge
+        double rotation_profile_power = 0.0;   // omega(r) = omega0 (r/R)^p;
+                                               // 0 = solid body, p > 0 keeps
+                                               // the core nearly non-rotating
+        double rotation_core_cutoff_pc = 0.0;  // omega = 0 inside this radius
+                                               // (rotation decoupled from the
+                                               // embedded core); 0 = no cutoff
+        double quiescent_core_radius_pc = 0.0; // turbulent velocity damped
+                                               // inside this radius by a
+                                               // smoothstep in (r/R_q)^2;
+                                               // 0 = undamped
         std::size_t mode_shells = 24;  // log-spaced |k| shells
         std::size_t modes_per_shell = 84;      // ~2000 modes total
         std::uint64_t seed = 7;
