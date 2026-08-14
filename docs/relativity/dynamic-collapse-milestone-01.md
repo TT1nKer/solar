@@ -1,6 +1,6 @@
 # Dynamic Collapse Track — Milestone 01 (revised): 3D Post-Newtonian Collapse of a Turbulent Rotating Cloud
 
-Status: Regime A in progress — Barnes-Hut tree gravity and the homogeneous free-fall cycloid anchor are implemented and passing
+Status: Regime A in progress — Barnes-Hut tree gravity, the free-fall cycloid anchor, and the turbulent-cloud initial-condition generator (Kritsuk spectrum, log-normal density, rotation) are implemented and passing
 Branch: codex/dynamic-collapse-bh
 Supersedes: the spherical-dust draft of the same milestone name.
 
